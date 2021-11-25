@@ -15,6 +15,7 @@ if (!defined('_PS_VERSION_'))
 
 require dirname(__FILE__) . '/classes/MarketplaceHelper.php';
 require_once dirname(__FILE__) . '/classes/MobbexVendor.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexCustomFields.php';
 
 /**
  * Main class of the module
@@ -258,4 +259,129 @@ class Mobbex_Marketplace extends Module
         }
         return true;
     }
+
+        /**
+     * Add Marketplace data to Mobbex checkout body if marketplace is active.
+     * 
+     * @param array
+     * @param array
+     * @return array
+     */
+    public function hookActionMobbexCheckoutRequest($data, $products)
+    {
+
+        if(!Configuration::get(MarketplaceHelper::K_ACTIVE))
+            exit;
+
+        $vendors = MarketplaceHelper::getProductVendors($products);
+
+        foreach ($vendors as $vendor_id => $items) {
+
+            $productIds = [];
+
+            foreach ($items as $item) {
+
+                $total        = round($item['price_wt'], 2);
+                $fee          = MarketplaceHelper::getProductFee($item['id_product']);
+                $productIds[] = $item['id_product'];
+                $vendor       = MobbexVendor::getVendors(true, 'id', $vendor_id); 
+                $data['split'][] = [
+                    'tax_id'      => strval($vendor['tax_id']),
+                    'description' => "Split payment - tax_".$vendor[0]['tax_id'].":".$vendor[0]['tax_id']."- Product IDs: " . implode(", ", $productIds),
+                    'total'       => $total,
+                    'reference'   => $data['reference'] . '_split_' . $vendor[0]['tax_id'],
+                    'fee'         => $fee . '%',
+                    'hold'        => $vendor[0]['hold'] == 1 ? true : false,
+                ];
+            }
+        }
+
+        return $data;
+    }
+
+    /** HOOKS */
+
+    /**
+     * Show product admin settings.
+     * 
+     * @param array $params
+     */
+    public function hookDisplayMobbexProductSettings($params)
+    {
+        $this->context->smarty->assign([
+            'marketplace'   => (bool) Configuration::get(MarketplaceHelper::K_ACTIVE),
+            'vendors'       => MobbexVendor::getVendors() ?: [],
+            'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'product', 'vendor') ?: null,
+            'fee'           => MobbexCustomFields::getCustomField($params['id'], 'product', 'fee') ?: '',
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hooks/vendors.tpl');
+    }
+
+    /**
+     * Show category admin settings.
+     * 
+     * @param array $params
+     */
+    public function hookDisplayMobbexCategorySettings($params)
+    {
+        $this->context->smarty->assign([
+            'marketplace'   => (bool) Configuration::get(MarketplaceHelper::K_ACTIVE),
+            'vendors'       => MobbexVendor::getVendors() ?: [],
+            'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'category', 'vendor') ?: null,
+            'fee'           => MobbexCustomFields::getCustomField($params['id'], 'category', 'fee') ?: '',
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hooks/vendors.tpl');
+    }
+
+    /**
+     * Update product admin settings.
+     * 
+     * @param array $params
+     */
+    public function hookActionProductUpdate($params)
+    {
+        $vendor = isset($_POST['mbbx_vendor']) ? $_POST['mbbx_vendor'] : null;
+        $fee    = isset($_POST['mbbx_vendor_fee']) ? $_POST['fee'] : null;
+        // If is bulk import
+        if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
+            // Only save when they are not empty
+            if($vendor)
+                MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
+            if($fee)
+                MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
+
+        } else {
+            // Save data directly
+            MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
+            MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
+        }
+    }
+
+    /**
+     * Update category admin settings.
+     * 
+     * @param array $params
+     */
+    public function hookActionCategoryUpdate($params)
+    {
+        
+        $vendor = isset($_POST['mbbx_vendor']) ? $_POST['mbbx_vendor'] : null;
+        $fee    = isset($_POST['mbbx_vendor_fee']) ? $_POST['mbbx_vendor_fee'] : null;
+        
+        // If is bulk import
+        if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
+            // Only save when they are not empty
+            if($vendor)
+                MobbexCustomFields::saveCustomField($params['id'], 'category', 'vendor', $vendor);
+            if($fee)
+                MobbexCustomFields::saveCustomField($params['id'], 'category', 'fee', $fee);
+            } else {
+                // Save data directly
+                MobbexCustomFields::saveCustomField($params['id'], 'category', 'vendor', $vendor);
+                MobbexCustomFields::saveCustomField($params['id'], 'category', 'fee', $fee);
+        }
+    }
+    
 }
