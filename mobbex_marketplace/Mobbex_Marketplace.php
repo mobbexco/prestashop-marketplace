@@ -13,6 +13,7 @@
 if (!defined('_PS_VERSION_'))
     exit;
 
+require dirname(__FILE__) . '/classes/MarketplaceHelper.php';
 
 /**
  * Main class of the module
@@ -28,7 +29,7 @@ class Mobbex_Marketplace extends Module
     {
         $this->name            = 'mobbex_marketplace';
         $this->tab             = 'payments_gateways';
-        $this->version         = '1.0.0';
+        $this->version         = MarketplaceHelper::MOBBEX_MARKETPLACE_VERSION;
         $this->author          = 'Mobbex Co';
         $this->currencies_mode = 'checkbox';
         $this->bootstrap       = true;
@@ -109,5 +110,85 @@ class Mobbex_Marketplace extends Module
         }
 
         return true;
+    }
+
+    /** CONFIG FORM */
+
+    /**
+     * Add Marketplace options in Mobbex configuration.
+     * @param array $form
+     * @return array $form
+     */
+    public function hookDisplayMobbexConfiguration($form)
+    {
+        if (Tools::isSubmit('submit_mobbex')) {
+            $this->postProcess();
+        }
+        
+        $form['form']['tabs']['tab_marketplace'] = $this->l('Marketplace Configuration');
+        $inputs = [
+            [
+                'type'     => 'switch',
+                'label'    => $this->l('Activar Marketplace'),
+                'name'     => MarketplaceHelper::K_ACTIVE,
+                'is_bool'  => true,
+                'required' => false,
+                'tab'      => 'tab_marketplace',
+                'values'   => [
+                    [
+                        'id'    => 'active_on_marketplace',
+                        'value' => true,
+                        'label' => $this->l('Activar'),
+                    ],
+                    [
+                        'id'    => 'active_off_marketplace',
+                        'value' => false,
+                        'label' => $this->l('Desactivar'),
+                    ],
+                ],
+            ],
+            [
+                'type'     => 'text',
+                'label'    => $this->l('Fee (%)'),
+                'name'     => MarketplaceHelper::K_FEE,
+                'required' => false,
+                'tab'      => 'tab_marketplace',
+            ]
+        ];
+
+        foreach ($inputs as $value) {
+            $form['form']['input'][] = $value;
+        }
+
+        return $form;
+    }
+
+    /**
+     * Logic to apply when the configuration form is posted
+     *
+     * @return void
+     */
+    public function postProcess()
+    {
+        $form_values = $this->getConfigFormValues();
+
+        foreach (array_keys($form_values) as $key) {
+            Configuration::updateValue($key, Tools::getValue($key));
+        }
+    }
+
+    /**
+     * Retrieve the current configuration values.
+     *
+     * @see $this->renderForm
+     *
+     * @return array
+     */
+    protected function getConfigFormValues()
+    {
+        return array(
+            MarketplaceHelper::K_ACTIVE => Configuration::get(MarketplaceHelper::K_ACTIVE, ''),
+            MarketplaceHelper::K_FEE    => Configuration::get(MarketplaceHelper::K_FEE, ''),
+        );
     }
 }
