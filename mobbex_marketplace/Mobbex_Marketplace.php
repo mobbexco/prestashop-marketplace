@@ -14,6 +14,7 @@ if (!defined('_PS_VERSION_'))
     exit;
 
 require dirname(__FILE__) . '/classes/MarketplaceHelper.php';
+require_once dirname(__FILE__) . '/classes/MobbexVendor.php';
 
 /**
  * Main class of the module
@@ -66,8 +67,9 @@ class Mobbex_Marketplace extends Module
         }
 
         $this->_createTable();
+        $this->_installTab();
 
-        return parent::install();
+        return parent::install() && $this->registerHooks();
     }
 
     /**
@@ -80,7 +82,7 @@ class Mobbex_Marketplace extends Module
      */
     public function uninstall()
     {
-        return parent::uninstall();
+        return parent::uninstall() && $this->_uninstallTab();
     }
 
     /**
@@ -190,5 +192,70 @@ class Mobbex_Marketplace extends Module
             MarketplaceHelper::K_ACTIVE => Configuration::get(MarketplaceHelper::K_ACTIVE, ''),
             MarketplaceHelper::K_FEE    => Configuration::get(MarketplaceHelper::K_FEE, ''),
         );
+    }
+
+    /** INSTALL VENDOR TABLE METHODS */
+
+    public function _createTable()
+    {
+
+        $db = DB::getInstance();
+
+        $db->execute(
+            "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_vendor` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                `tax_id` TEXT NOT NULL,
+				`name` TEXT NOT NULL,
+				`fee` TEXT NOT NULL,
+				`hold` BOOLEAN NOT NULL,
+                `created` DATE NOT NULL
+            ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
+        );
+    }
+
+    /**
+     * Install Mobbex controller in backoffice
+     * @return boolean
+     */
+    protected function _installTab()
+    {
+        
+        $tab = new Tab();
+        $tab->class_name = 'AdminMobbex';
+        $tab->module     = $this->name;
+        $tab->id_parent  = (int)Tab::getIdFromClassName('DEFAULT');
+        $tab->icon       = 'settings_applications';
+        $languages       = Language::getLanguages();
+
+        foreach ($languages as $lang) {
+            $tab->name[$lang['id_lang']] = $this->l('Mobbex Admin controller');
+        }
+        try {
+            $tab->save();
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            return false;
+        }
+ 
+        return true;
+    }
+ 
+    /**
+     * Uninstall Mobbex controller in backoffice
+     * @return boolean
+     */
+    protected function _uninstallTab()
+    {
+        $idTab = (int)Tab::getIdFromClassName('AdminMobbex');
+        if ($idTab) {
+            $tab = new Tab($idTab);
+            try {
+                $tab->delete();
+            } catch (Exception $e) {
+                echo $e->getMessage();
+                return false;
+            }
+        }
+        return true;
     }
 }
