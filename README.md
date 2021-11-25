@@ -1,4 +1,4 @@
-Mobbex for PrestaShop
+Mobbex Marketplace for PrestaShop
 Requisitos
 
     PrestaShop >= 1.6
