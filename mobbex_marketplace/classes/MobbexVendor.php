@@ -42,4 +42,5 @@ class MobbexVendor extends ObjectModel
         $result = Db::getInstance()->executeS($sql);
         return !empty($result) ? $result : false;
     }
+
 }

@@ -17,12 +17,12 @@
         </fieldset>
     </div>
     <div class="col-md-12 mbbx-mrkt-cfg">
-        <label for="mbbx_vendor_fee">Comisión (%)</label>
+        <label for="mbbx_fee">Comisión (%)</label>
         <p>Especifique el porcentaje de la comisión.</p>
     </div>
     <div class="col-md-3">
         <fieldset>
-            <input type="text" name="mbbx_vendor_fee" value="{$fee}">
+            <input type="text" name="mbbx_fee" id="mbbx_fee" value="{$fee}">
         </fieldset>
     </div>
 </div>

@@ -14,19 +14,22 @@ class MarketplaceHelper
      * @param array
      * @return array
      */
-    public static function getProductVendors($products)
+    public static function getProductVendors($products, $filter = null)
     {
         $vendors = [];
 
         foreach ($products as $product) {
             $vendor = MobbexCustomFields::getCustomField($product['id_product'], 'product', 'vendor');
             $vendor = MobbexVendor::getVendors(true, 'id', $vendor);
-            $vendor_id = $vendor[0]['tax_id'] ?: '';
+            $vendor_id = $vendor[0]['id'] ?: '';
 
-            if (empty($tax_id))
+            if (empty($vendor_id))
                 return [];
 
-            $vendors[$vendor_id][] = $product;
+            if ($filter)
+                array_push($vendors[$vendor_id]['items'], $product);
+            else
+                $vendors[$vendor_id][] = $product;
         }
         return $vendors;
     }
@@ -51,7 +54,7 @@ class MarketplaceHelper
         }
 
         //Get Vendor fee
-        if(MobbexCustomFields::getCustomField($productId, 'product', 'vendor')) {
+        if (MobbexCustomFields::getCustomField($productId, 'product', 'vendor')) {
             $vendor  = MobbexVendor::getVendors(true, 'id', MobbexCustomFields::getCustomField($productId, 'producto', 'vendor'));
             if ($vendor['fee'])
                 return $vendor['fee'];
@@ -59,5 +62,30 @@ class MarketplaceHelper
 
         //return general fee
         return Configuration::get(self::K_FEE);
+    }
+
+    public static function getMarketplaceitems($products, $cart_total, $mobbex_total)
+    {
+        $items = [];
+        foreach ($products as $product) {
+
+            $vendor_id = MobbexCustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            $vendor    = MobbexVendor::getVendors(true, 'id', $vendor_id);
+            $fee       = MarketplaceHelper::getProductFee($product['id_product']);
+            $dif       = ($cart_total / $mobbex_total * 100) - 100;
+            $dif       = $dif <= 9 ? '0.0' . $dif : '0.' . $dif;
+            
+            $items[$product['id_product']]['name']          = $product['name'];
+            $items[$product['id_product']]['quantity']      = $product['quantity'];
+            $items[$product['id_product']]['total']         = round($product['price_wt'] + ($product['price_wt'] * $dif), 2);
+            $items[$product['id_product']]['fee_amount']    = $fee;
+            $fee                                            = $fee <= 9 ? '0.0' . $fee : '0.' . $fee;
+            $items[$product['id_product']]['fee']           = round(($product['price_wt'] + ($product['price_wt'] * $dif)) * $fee, 2);
+            $items[$product['id_product']]['vendor_name']   = $vendor[0]['name'] ?: '';
+            $items[$product['id_product']]['vendor_tax_id'] = $vendor[0]['tax_id'] ?: '';
+            $items[$product['id_product']]['vendor_hold']   = $vendor[0]['hold'] == 1 ? 'YES' : 'NO';
+
+        }
+        return $items;
     }
 }

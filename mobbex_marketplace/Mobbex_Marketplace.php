@@ -13,9 +13,11 @@
 if (!defined('_PS_VERSION_'))
     exit;
 
-require dirname(__FILE__) . '/classes/MarketplaceHelper.php';
+require_once dirname(__FILE__) . '/classes/MarketplaceHelper.php';
 require_once dirname(__FILE__) . '/classes/MobbexVendor.php';
+require_once dirname(__FILE__) . '/classes/MarketplaceTransaction.php';
 require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexCustomFields.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexHelper.php';
 
 /**
  * Main class of the module
@@ -42,7 +44,7 @@ class Mobbex_Marketplace extends Module
         $this->description            = $this->l('Plugin de marketplace para Mobbex');
         $this->confirmUninstall       = $this->l('¿Deseas instalar Mobbex Marketplace?');
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-
+        $this->registerHooks();
     }
 
     /**
@@ -97,7 +99,10 @@ class Mobbex_Marketplace extends Module
             'displayMobbexConfiguration',
             'actionMobbexCheckoutRequest',
             'displayMobbexProductSettings',
-            'displayMobbexCategorySettings'
+            'displayMobbexCategorySettings',
+            'actionProductUpdate',
+            'actionCategoryUpdate',
+            'displayMobbexOrderWidget'
         ];
 
         $ps16Hooks = [];
@@ -212,6 +217,13 @@ class Mobbex_Marketplace extends Module
                 `created` DATE NOT NULL
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
+        $db->execute(
+            "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_marketplace_transaction` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+				`payment_id` TEXT NOT NULL,
+                `data` TEXT NOT NULL
+            ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
+        );
     }
 
     /**
@@ -274,7 +286,6 @@ class Mobbex_Marketplace extends Module
             exit;
 
         $vendors = MarketplaceHelper::getProductVendors($products);
-
         foreach ($vendors as $vendor_id => $items) {
 
             $productIds = [];
@@ -286,7 +297,7 @@ class Mobbex_Marketplace extends Module
                 $productIds[] = $item['id_product'];
                 $vendor       = MobbexVendor::getVendors(true, 'id', $vendor_id); 
                 $data['split'][] = [
-                    'tax_id'      => strval($vendor['tax_id']),
+                    'tax_id'      => strval($vendor[0]['tax_id']),
                     'description' => "Split payment - tax_".$vendor[0]['tax_id'].":".$vendor[0]['tax_id']."- Product IDs: " . implode(", ", $productIds),
                     'total'       => $total,
                     'reference'   => $data['reference'] . '_split_' . $vendor[0]['tax_id'],
@@ -315,7 +326,7 @@ class Mobbex_Marketplace extends Module
             'fee'           => MobbexCustomFields::getCustomField($params['id'], 'product', 'fee') ?: '',
         ]);
 
-        return $this->display(__FILE__, 'views/templates/hooks/vendors.tpl');
+        return $this->display(__FILE__, 'views/templates/hook/vendors.tpl');
     }
 
     /**
@@ -332,7 +343,7 @@ class Mobbex_Marketplace extends Module
             'fee'           => MobbexCustomFields::getCustomField($params['id'], 'category', 'fee') ?: '',
         ]);
 
-        return $this->display(__FILE__, 'views/templates/hooks/vendors.tpl');
+        return $this->display(__FILE__, 'views/templates/hook/vendors.tpl');
     }
 
     /**
@@ -343,7 +354,7 @@ class Mobbex_Marketplace extends Module
     public function hookActionProductUpdate($params)
     {
         $vendor = isset($_POST['mbbx_vendor']) ? $_POST['mbbx_vendor'] : null;
-        $fee    = isset($_POST['mbbx_vendor_fee']) ? $_POST['fee'] : null;
+        $fee    = isset($_POST['mbbx_fee']) ? $_POST['mbbx_fee'] : null;
         // If is bulk import
         if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
             // Only save when they are not empty
@@ -368,20 +379,56 @@ class Mobbex_Marketplace extends Module
     {
         
         $vendor = isset($_POST['mbbx_vendor']) ? $_POST['mbbx_vendor'] : null;
-        $fee    = isset($_POST['mbbx_vendor_fee']) ? $_POST['mbbx_vendor_fee'] : null;
+        $fee    = isset($_POST['mbbx_fee']) ? $_POST['mbbx_fee'] : null;
         
         // If is bulk import
         if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
             // Only save when they are not empty
             if($vendor)
-                MobbexCustomFields::saveCustomField($params['id'], 'category', 'vendor', $vendor);
+                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
             if($fee)
-                MobbexCustomFields::saveCustomField($params['id'], 'category', 'fee', $fee);
+                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
             } else {
                 // Save data directly
-                MobbexCustomFields::saveCustomField($params['id'], 'category', 'vendor', $vendor);
-                MobbexCustomFields::saveCustomField($params['id'], 'category', 'fee', $fee);
+                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
+                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
         }
+    }
+
+    /**
+     * Show Marketplace info in order Widget.
+     * 
+     * @param array $params
+     */
+    public function hookDisplayMobbexOrderWidget($params)
+    {
+        $data = MarketplaceTransaction::getData($params['id']);
+        $data = json_decode($data['data'], true);
+
+        $this->context->smarty->assign([
+            'data' => $data
+        ]);
+
+        return $this->display(__FILE__, 'views/templates/hook/widget.tpl');
+    }
+
+    /**
+     * Create & store Marketplace data from webhook.
+     * 
+     * @param array
+     * @param string
+     * 
+     */
+    public function hookActionMobbexWebhook($data, $cart_id) {
+
+        //Get items
+        $cart = new Cart($cart_id);
+        $products = $cart->getProducts();
+        $items = MarketplaceHelper::getMarketplaceItems($products, $cart->getOrderTotal(), $data['total']);
+        
+        //Save the data
+        return MarketplaceTransaction::saveTransaction($data['payment_id'], json_encode($items));
     }
     
 }
+
