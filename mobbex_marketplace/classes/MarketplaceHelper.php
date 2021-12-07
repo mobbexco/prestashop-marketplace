@@ -6,7 +6,6 @@ class MarketplaceHelper
     const PS_16 = "1.6";
     const PS_17 = "1.7";
 
-    const K_ACTIVE        = "MOBBEX_MARKETPLACE_ACTIVE";
     const K_FEE           = "MOBBEX_MARKETPLACE_FEE";
 
     /**
@@ -20,6 +19,11 @@ class MarketplaceHelper
 
         foreach ($products as $product) {
             $vendor = MobbexCustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            
+            //If a product did not have vendor stop the process
+            if(!$vendor)
+                return false;
+
             $vendor = MobbexVendor::getVendors(true, 'id', $vendor);
             $vendor_id = $vendor[0]['id'] ?: '';
 
@@ -42,8 +46,9 @@ class MarketplaceHelper
     public static function getProductFee($productId)
     {
         //Get Product fee
-        if (MobbexCustomFields::getCustomfield($productId, 'product', 'fee'))
-            return MobbexCustomFields::getCustomfield($productId, 'product', 'fee');
+        $fee = MobbexCustomFields::getCustomfield($productId, 'product', 'fee');
+        if ($fee)
+            return $fee;
 
         //get category fee
         $product = new Product($productId);
@@ -54,8 +59,9 @@ class MarketplaceHelper
         }
 
         //Get Vendor fee
-        if (MobbexCustomFields::getCustomField($productId, 'product', 'vendor')) {
-            $vendor  = MobbexVendor::getVendors(true, 'id', MobbexCustomFields::getCustomField($productId, 'producto', 'vendor'));
+        $vendor = MobbexCustomFields::getCustomField($productId, 'product', 'vendor');
+        if ($vendor) {
+            $vendor = MobbexVendor::getVendors(true, 'id', $fee);
             if ($vendor['fee'])
                 return $vendor['fee'];
         }

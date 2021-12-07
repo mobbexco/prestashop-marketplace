@@ -1,4 +1,4 @@
-<div class="col-md-12 align-items-center {if !$marketplace}hidden{/if}" style="margin-top: 2em;">
+<div class="col-md-12 align-items-center" style="margin-top: 2em;">
     <h2 class="mr-3" style="display: inline-block;">Marketplace</h2>
 </div>
 <div class="row col-md-12 form-group mbbx-mrkt-cfg {if !$marketplace}hidden{/if}">

@@ -16,6 +16,7 @@ if (!defined('_PS_VERSION_'))
 require_once dirname(__FILE__) . '/classes/MarketplaceHelper.php';
 require_once dirname(__FILE__) . '/classes/MobbexVendor.php';
 require_once dirname(__FILE__) . '/classes/MarketplaceTransaction.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/classes/Updater.php';
 require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexCustomFields.php';
 require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexHelper.php';
 
@@ -24,8 +25,6 @@ require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexHelper.php';
  */
 class Mobbex_Marketplace extends Module
 {
-    /** @var Mobbex_Marketplace_Updater */
-    public $updater;
     /**
      * Constructor
      */
@@ -44,7 +43,6 @@ class Mobbex_Marketplace extends Module
         $this->description            = $this->l('Plugin de marketplace para Mobbex');
         $this->confirmUninstall       = $this->l('¿Deseas instalar Mobbex Marketplace?');
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-        $this->registerHooks();
     }
 
     /**
@@ -120,6 +118,20 @@ class Mobbex_Marketplace extends Module
         return true;
     }
 
+    /**
+     * Try to update the module.
+     * 
+     * @return void 
+     */
+    public function runUpdate()
+    {
+        try {
+            $this->updater->updateVersion($this, true);
+        } catch (\PrestaShopException $e) {
+            PrestaShopLogger::addLog('Mobbex Update Error: ' . $e->getMessage(), 3, null, 'Mobbex', null, true, null);
+        }
+    }
+
     /** CONFIG FORM */
 
     /**
@@ -132,29 +144,17 @@ class Mobbex_Marketplace extends Module
         if (Tools::isSubmit('submit_mobbex')) {
             $this->postProcess();
         }
+
+        if (!empty($_GET['run_mrkt_update'])) {
+            $this->runUpdate();
+            Tools::redirectAdmin(MobbexHelper::getUpgradeURL());
+        }
+
+        if ($this->updater->hasUpdates(MarketplaceHelper::MOBBEX_MARKETPLACE_VERSION))
+            $form['form']['description'] = "¡Nueva actualización disponible! Haga <a href='$_SERVER[REQUEST_URI]&run_mrkt_update=1'>clic aquí</a> para actualizar a la versión " . $this->updater->latestRelease['tag_name'];
         
         $form['form']['tabs']['tab_marketplace'] = $this->l('Marketplace Configuration');
         $inputs = [
-            [
-                'type'     => 'switch',
-                'label'    => $this->l('Activar Marketplace'),
-                'name'     => MarketplaceHelper::K_ACTIVE,
-                'is_bool'  => true,
-                'required' => false,
-                'tab'      => 'tab_marketplace',
-                'values'   => [
-                    [
-                        'id'    => 'active_on_marketplace',
-                        'value' => true,
-                        'label' => $this->l('Activar'),
-                    ],
-                    [
-                        'id'    => 'active_off_marketplace',
-                        'value' => false,
-                        'label' => $this->l('Desactivar'),
-                    ],
-                ],
-            ],
             [
                 'type'     => 'text',
                 'label'    => $this->l('Fee (%)'),
@@ -195,7 +195,6 @@ class Mobbex_Marketplace extends Module
     protected function getConfigFormValues()
     {
         return array(
-            MarketplaceHelper::K_ACTIVE => Configuration::get(MarketplaceHelper::K_ACTIVE, ''),
             MarketplaceHelper::K_FEE    => Configuration::get(MarketplaceHelper::K_FEE, ''),
         );
     }
@@ -282,10 +281,11 @@ class Mobbex_Marketplace extends Module
     public function hookActionMobbexCheckoutRequest($data, $products)
     {
 
-        if(!Configuration::get(MarketplaceHelper::K_ACTIVE))
-            exit;
-
         $vendors = MarketplaceHelper::getProductVendors($products);
+
+        if(!$vendors)
+            throw Exception("One or more products doesn't have a vendor." );
+
         foreach ($vendors as $vendor_id => $items) {
 
             $productIds = [];
@@ -320,7 +320,6 @@ class Mobbex_Marketplace extends Module
     public function hookDisplayMobbexProductSettings($params)
     {
         $this->context->smarty->assign([
-            'marketplace'   => (bool) Configuration::get(MarketplaceHelper::K_ACTIVE),
             'vendors'       => MobbexVendor::getVendors() ?: [],
             'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'product', 'vendor') ?: null,
             'fee'           => MobbexCustomFields::getCustomField($params['id'], 'product', 'fee') ?: '',
@@ -337,7 +336,6 @@ class Mobbex_Marketplace extends Module
     public function hookDisplayMobbexCategorySettings($params)
     {
         $this->context->smarty->assign([
-            'marketplace'   => (bool) Configuration::get(MarketplaceHelper::K_ACTIVE),
             'vendors'       => MobbexVendor::getVendors() ?: [],
             'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'category', 'vendor') ?: null,
             'fee'           => MobbexCustomFields::getCustomField($params['id'], 'category', 'fee') ?: '',
