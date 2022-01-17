@@ -43,7 +43,7 @@ class Mobbex_Marketplace extends Module
         $this->description            = $this->l('Plugin de marketplace para Mobbex');
         $this->confirmUninstall       = $this->l('¿Deseas instalar Mobbex Marketplace?');
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-        $this->updater = new \Mobbex\Updater();
+        $this->updater = new \Mobbex\Updater('https://github.com/mobbexco/prestashop-marketplace.git');
     }
 
     /**
@@ -285,7 +285,7 @@ class Mobbex_Marketplace extends Module
         $vendors = MarketplaceHelper::getProductVendors($products);
 
         if(!$vendors)
-            throw Exception("One or more products doesn't have a vendor." );
+            throw new Exception("One or more products doesn't have a vendor." );
 
         foreach ($vendors as $vendor_id => $items) {
 
