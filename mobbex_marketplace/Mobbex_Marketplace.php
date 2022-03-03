@@ -43,7 +43,7 @@ class Mobbex_Marketplace extends Module
         $this->description            = $this->l('Plugin de marketplace para Mobbex');
         $this->confirmUninstall       = $this->l('¿Deseas instalar Mobbex Marketplace?');
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-        $this->updater = new \Mobbex\Updater('/mobbexco/prestashop-marketplace');
+        $this->updater = new \Mobbex\Updater('mobbexco/prestashop-marketplace');
     }
 
     /**
