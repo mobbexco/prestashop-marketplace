@@ -101,7 +101,8 @@ class Mobbex_Marketplace extends Module
             'displayMobbexCategorySettings',
             'actionProductUpdate',
             'actionCategoryUpdate',
-            'displayMobbexOrderWidget'
+            'displayMobbexOrderWidget',
+            'actionMobbexWebhook'
         ];
 
         $ps16Hooks = [];
@@ -419,7 +420,6 @@ class Mobbex_Marketplace extends Module
      * 
      */
     public function hookActionMobbexWebhook($data, $cart_id) {
-
         //Get items
         $cart = new Cart($cart_id);
         $products = $cart->getProducts();
