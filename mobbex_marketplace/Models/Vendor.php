@@ -1,6 +1,8 @@
 <?php
 
-class MobbexVendor extends ObjectModel
+namespace Mobbex\PS\Marketplace\Models;
+
+class Vendor extends \ObjectModel
 {
     public $id;
     public $tax_id;
@@ -31,7 +33,7 @@ class MobbexVendor extends ObjectModel
      */
     public static function getVendors($filter = null, $paramName = null, $param = null)
     {
-        $sql = new DbQuery();
+        $sql = new \DbQuery();
         $sql->select('*');
         if($filter) {
             $query = $paramName . ' = ' . $param;
@@ -39,7 +41,7 @@ class MobbexVendor extends ObjectModel
         }
         $sql->from('mobbex_vendor', 'f');
 
-        $result = Db::getInstance()->executeS($sql);
+        $result = \Db::getInstance()->executeS($sql);
         return !empty($result) ? $result : false;
     }
 

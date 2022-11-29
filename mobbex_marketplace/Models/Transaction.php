@@ -1,6 +1,8 @@
 <?php
 
-class MarketplaceTransaction extends ObjectModel
+namespace Mobbex\PS\Marketplace\Models;
+
+class Transaction extends \ObjectModel
 {
     public $id;
     public $payment_id;
@@ -24,12 +26,12 @@ class MarketplaceTransaction extends ObjectModel
      */
     public static function getData($id)
     {
-        $sql = new DbQuery();
+        $sql = new \DbQuery();
         $sql->select('*');
         $sql->where("payment_id = '$id'");
         $sql->from('mobbex_marketplace_transaction', 'f');
 
-        $result = Db::getInstance()->executeS($sql);
+        $result = \Db::getInstance()->executeS($sql);
         return $result ? $result[0] : false;
     }
 
@@ -38,7 +40,7 @@ class MarketplaceTransaction extends ObjectModel
      */
     public static function saveTransaction($payment_id, $data)
     {
-        $trx = new MarketplaceTransaction();
+        $trx = new \Mobbex\PS\Marketplace\Models\Transaction();
 
         $trx->payment_id = $payment_id;
         $trx->data       = $data;      

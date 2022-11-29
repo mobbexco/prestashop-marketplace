@@ -13,12 +13,12 @@
 if (!defined('_PS_VERSION_'))
     exit;
 
-require_once dirname(__FILE__) . '/classes/MarketplaceHelper.php';
-require_once dirname(__FILE__) . '/classes/MobbexVendor.php';
-require_once dirname(__FILE__) . '/classes/MarketplaceTransaction.php';
-require_once _PS_MODULE_DIR_ . 'mobbex/classes/Updater.php';
-require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexCustomFields.php';
-require_once _PS_MODULE_DIR_ . 'mobbex/classes/MobbexHelper.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/Models/Updater.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/Models/Config.php';
+require_once _PS_MODULE_DIR_ . 'mobbex/Models/Logger.php';
+require_once dirname(__FILE__) . '/Models/Helper.php';
+require_once dirname(__FILE__) . '/Models/Vendor.php';
+require_once dirname(__FILE__) . '/Models/Transaction.php';
 
 /**
  * Main class of the module
@@ -32,7 +32,7 @@ class Mobbex_Marketplace extends Module
     {
         $this->name            = 'mobbex_marketplace';
         $this->tab             = 'payments_gateways';
-        $this->version         = MarketplaceHelper::MOBBEX_MARKETPLACE_VERSION;
+        $this->version         = \Mobbex\PS\Marketplace\Models\Helper::PLUGIN_VERSION;
         $this->author          = 'Mobbex Co';
         $this->currencies_mode = 'checkbox';
         $this->bootstrap       = true;
@@ -43,7 +43,8 @@ class Mobbex_Marketplace extends Module
         $this->description            = $this->l('Plugin de marketplace para Mobbex');
         $this->confirmUninstall       = $this->l('¿Deseas instalar Mobbex Marketplace?');
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-        $this->updater = new \Mobbex\Updater('mobbexco/prestashop-marketplace');
+        //Mobbex Classes
+        $this->updater = new \Mobbex\PS\Checkout\Models\Updater('mobbexco/prestashop-marketplace');
     }
 
     /**
@@ -58,13 +59,11 @@ class Mobbex_Marketplace extends Module
     {
         if (extension_loaded('curl') == false) {
             $this->_errors[] = $this->l('You have to enable the cURL extension ') . $this->l('on your server to install this module.');
-
             return false;
         }
 
         if (!Module::isInstalled('mobbex') && !Module::isEnabled('mobbex')){
             $this->_errors[] = $this->l('Requires Mobbex Webpay module ') . $this->l('on your server to install this module.');
-
             return false;
         }
 
@@ -130,7 +129,8 @@ class Mobbex_Marketplace extends Module
         try {
             $this->updater->updateVersion($this, true);
         } catch (\PrestaShopException $e) {
-            PrestaShopLogger::addLog('Mobbex Update Error: ' . $e->getMessage(), 3, null, 'Mobbex', null, true, null);
+            $logger = new \Mobbex\PS\Checkout\Models\Logger();
+            $logger->log('error','Mobbex Marketplace Update Error: ', $e->getMessage());
         }
     }
 
@@ -143,32 +143,20 @@ class Mobbex_Marketplace extends Module
      */
     public function hookDisplayMobbexConfiguration($form)
     {
-        if (Tools::isSubmit('submit_mobbex')) {
+        if (Tools::isSubmit('submit_mobbex'))
             $this->postProcess();
-        }
 
         if (!empty($_GET['run_mrkt_update'])) {
             $this->runUpdate();
-            Tools::redirectAdmin(MobbexHelper::getUpgradeURL());
+            Tools::redirectAdmin(\Mobbex\PS\Checkout\Models\Helper::getUpgradeURL());
         }
-
-        if ($this->updater->hasUpdates(MarketplaceHelper::MOBBEX_MARKETPLACE_VERSION))
+        if ($this->updater->hasUpdates(\Mobbex\PS\Marketplace\Models\Helper::PLUGIN_VERSION))
             $form['form']['description'] = "¡Nueva actualización disponible! Haga <a href='$_SERVER[REQUEST_URI]&run_mrkt_update=1'>clic aquí</a> para actualizar a la versión " . $this->updater->latestRelease['tag_name'];
         
         $form['form']['tabs']['tab_marketplace'] = $this->l('Marketplace Configuration');
-        $inputs = [
-            [
-                'type'     => 'text',
-                'label'    => $this->l('Fee (%)'),
-                'name'     => MarketplaceHelper::K_FEE,
-                'required' => false,
-                'tab'      => 'tab_marketplace',
-            ]
-        ];
-
-        foreach ($inputs as $value) {
+       
+        foreach ($this->getFormInputs() as $value)
             $form['form']['input'][] = $value;
-        }
 
         return $form;
     }
@@ -180,25 +168,43 @@ class Mobbex_Marketplace extends Module
      */
     public function postProcess()
     {
-        $form_values = $this->getConfigFormValues();
-
-        foreach (array_keys($form_values) as $key) {
-            Configuration::updateValue($key, Tools::getValue($key));
-        }
+        foreach ($this->getFormInputs() as $input)
+            Configuration::updateValue($input['name'], Tools::getValue($input['name']));
     }
 
     /**
-     * Retrieve the current configuration values.
+     * Retrieve an array with marketplace config options inputs.
      *
-     * @see $this->renderForm
+     * Input example:
+     * {
+     *  'type'     => string | input type <required>,
+     *  'label'    => string | input label <required>,
+     *  'name'     => string | input database name <required>,
+     *  'key'      => string | snake case key to get config <required>,
+     *  'default'  => mixed  | input default value <required>,
+     *  'required' => bool   | if input is required, <optional>,
+     *  'tab'      => string | name of the input father class <required>,
+     *  'values'   => array  | array with options, only for select inputs <optional>,
+     *  'desc'     => string | input description <optional>,
+     *  'is_bool'  => bool   | if input is bool <optional>,
+     *  'class'    => string | input class <optional>,
+     * }
      *
      * @return array
      */
-    protected function getConfigFormValues()
+    protected function getFormInputs()
     {
-        return array(
-            MarketplaceHelper::K_FEE    => Configuration::get(MarketplaceHelper::K_FEE, ''),
-        );
+        return [
+            [
+                'type'     => 'text',
+                'label'    => $this->l('Fee (%)'),
+                'name'     => 'MOBBEX_MARKETPLACE_FEE',
+                'required' => false,
+                'tab'      => 'tab_marketplace',
+                'default'  => '0',
+                'key'      => 'marketplace_fee'
+            ]
+        ];
     }
 
     /** INSTALL VENDOR TABLE METHODS */
@@ -233,24 +239,25 @@ class Mobbex_Marketplace extends Module
      */
     protected function _installTab()
     {
-        
         $tab = new Tab();
         $tab->class_name = 'AdminMobbex';
+        $tab->active     = 1;
         $tab->module     = $this->name;
-        $tab->id_parent  = (int)Tab::getIdFromClassName('DEFAULT');
+        $tab->id_parent  = (int)Tab::getIdFromClassName('SELL');
         $tab->icon       = 'settings_applications';
-        $languages       = Language::getLanguages();
 
-        foreach ($languages as $lang) {
-            $tab->name[$lang['id_lang']] = $this->l('Mobbex Admin controller');
-        }
+        foreach (Language::getLanguages() as $lang)
+            $tab->name[$lang['id_lang']] = $this->l('Mobbex Marketplace');
+
+
         try {
             $tab->save();
         } catch (Exception $e) {
-            echo $e->getMessage();
+            $logger = new \Mobbex\PS\Checkout\Models\Logger();
+            $logger->log('error', 'Mobbex_Marketplace > _installTab | Error installing Tab', $e->getMessage());
             return false;
         }
- 
+
         return true;
     }
  
@@ -266,14 +273,15 @@ class Mobbex_Marketplace extends Module
             try {
                 $tab->delete();
             } catch (Exception $e) {
-                echo $e->getMessage();
+                $logger = new \Mobbex\PS\Checkout\Models\Logger();
+                $logger->log('error', 'Mobbex_Marketplace > _installTab | Error uninstalling Tab', $e->getMessage());
                 return false;
             }
         }
         return true;
     }
 
-        /**
+    /**
      * Add Marketplace data to Mobbex checkout body if marketplace is active.
      * 
      * @param array
@@ -283,7 +291,7 @@ class Mobbex_Marketplace extends Module
     public function hookActionMobbexCheckoutRequest($data, $products)
     {
 
-        $vendors = MarketplaceHelper::getProductVendors($products);
+        $vendors = \Mobbex\PS\Marketplace\Models\Helper::getProductVendors($products);
 
         if(!$vendors)
             throw new Exception("One or more products doesn't have a vendor." );
@@ -295,7 +303,7 @@ class Mobbex_Marketplace extends Module
             foreach ($items as $item) {
 
                 $total        = round($item['price_wt'], 2);
-                $fee          = MarketplaceHelper::getProductFee($item['id_product']);
+                $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $productIds[] = $item['id_product'];
                 $vendor       = MobbexVendor::getVendors(true, 'id', $vendor_id); 
                 $data['split'][] = [
@@ -322,9 +330,9 @@ class Mobbex_Marketplace extends Module
     public function hookDisplayMobbexProductSettings($params)
     {
         $this->context->smarty->assign([
-            'vendors'       => MobbexVendor::getVendors() ?: [],
-            'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'product', 'vendor') ?: null,
-            'fee'           => MobbexCustomFields::getCustomField($params['id'], 'product', 'fee') ?: '',
+            'vendors'       => \Mobbex\PS\Marketplace\Models\Vendor::getVendors() ?: [],
+            'currentVendor' => Mobbex\PS\Checkout\Models\CustomFields::getCustomField($params['id'], 'product', 'vendor') ?: null,
+            'fee'           => Mobbex\PS\Checkout\Models\CustomFields::getCustomField($params['id'], 'product', 'fee') ?: '',
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/vendors.tpl');
@@ -338,9 +346,9 @@ class Mobbex_Marketplace extends Module
     public function hookDisplayMobbexCategorySettings($params)
     {
         $this->context->smarty->assign([
-            'vendors'       => MobbexVendor::getVendors() ?: [],
-            'currentVendor' => MobbexCustomFields::getCustomField($params['id'], 'category', 'vendor') ?: null,
-            'fee'           => MobbexCustomFields::getCustomField($params['id'], 'category', 'fee') ?: '',
+            'vendors'       => Mobbex\PS\Marketplace\Models\Vendor::getVendors() ?: [],
+            'currentVendor' => Mobbex\PS\Checkout\Models\CustomFields::getCustomField($params['id'], 'category', 'vendor') ?: null,
+            'fee'           => Mobbex\PS\Checkout\Models\CustomFields::getCustomField($params['id'], 'category', 'fee') ?: '',
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/vendors.tpl');
@@ -359,14 +367,14 @@ class Mobbex_Marketplace extends Module
         if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
             // Only save when they are not empty
             if($vendor)
-                MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
             if($fee)
-                MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
 
         } else {
             // Save data directly
-            MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
-            MobbexCustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
+            Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['id_product'], 'product', 'vendor', $vendor);
+            Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['id_product'], 'product', 'fee', $fee);
         }
     }
 
@@ -385,13 +393,13 @@ class Mobbex_Marketplace extends Module
         if (strnatcasecmp(Tools::getValue('controller'), 'adminImport') === 0) {
             // Only save when they are not empty
             if($vendor)
-                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
             if($fee)
-                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
             } else {
                 // Save data directly
-                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
-                MobbexCustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['category']->id, 'category', 'vendor', $vendor);
+                Mobbex\PS\Checkout\Models\CustomFields::saveCustomField($params['category']->id, 'category', 'fee', $fee);
         }
     }
 
@@ -402,7 +410,7 @@ class Mobbex_Marketplace extends Module
      */
     public function hookDisplayMobbexOrderWidget($params)
     {
-        $data = MarketplaceTransaction::getData($params['id']);
+        $data = \Mobbex\PS\Marketplace\Models\Transaction::getData($params['id']);
         $data = json_decode($data['data'], true);
 
         $this->context->smarty->assign([
@@ -423,10 +431,10 @@ class Mobbex_Marketplace extends Module
         //Get items
         $cart = new Cart($cart_id);
         $products = $cart->getProducts();
-        $items = MarketplaceHelper::getMarketplaceItems($products, $cart->getOrderTotal(), $data['total']);
+        $items = \Mobbex\PS\Marketplace\Models\Helper::getMarketplaceItems($products, $cart->getOrderTotal(), $data['total']);
         
         //Save the data
-        return MarketplaceTransaction::saveTransaction($data['payment_id'], json_encode($items));
+        return \Mobbex\PS\Marketplace\Models\Transaction::saveTransaction($data['payment_id'], json_encode($items));
     }
     
 }

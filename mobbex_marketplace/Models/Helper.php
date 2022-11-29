@@ -1,12 +1,12 @@
 <?php
 
-class MarketplaceHelper
+namespace Mobbex\PS\Marketplace\Models;
+
+class Helper
 {
-    const MOBBEX_MARKETPLACE_VERSION = '1.0.0';
+    const PLUGIN_VERSION = '1.0.0';
     const PS_16 = "1.6";
     const PS_17 = "1.7";
-
-    const K_FEE           = "MOBBEX_MARKETPLACE_FEE";
 
     /**
      * Get the vendors from a list of products.
@@ -18,13 +18,13 @@ class MarketplaceHelper
         $vendors = [];
 
         foreach ($products as $product) {
-            $vendor = MobbexCustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            $vendor = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
             
             //If a product did not have vendor stop the process
             if(!$vendor)
                 return false;
 
-            $vendor = MobbexVendor::getVendors(true, 'id', $vendor);
+            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor);
             $vendor_id = $vendor[0]['id'] ?: '';
 
             if (empty($vendor_id))
@@ -46,28 +46,28 @@ class MarketplaceHelper
     public static function getProductFee($productId)
     {
         //Get Product fee
-        $fee = MobbexCustomFields::getCustomfield($productId, 'product', 'fee');
+        $fee = \Mobbex\PS\Checkout\Models\CustomFields::getCustomfield($productId, 'product', 'fee');
         if ($fee)
             return $fee;
 
         //get category fee
-        $product = new Product($productId);
+        $product = new \Product($productId);
         foreach ($product->getCategories() as $categoryId) {
-            $fee = MobbexCustomFields::getCustomField($categoryId, 'category', 'fee');
+            $fee = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($categoryId, 'category', 'fee');
             if ($fee)
                 return $fee;
         }
 
         //Get Vendor fee
-        $vendor = MobbexCustomFields::getCustomField($productId, 'product', 'vendor');
+        $vendor = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($productId, 'product', 'vendor');
         if ($vendor) {
-            $vendor = MobbexVendor::getVendors(true, 'id', $fee);
+            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $fee);
             if ($vendor['fee'])
                 return $vendor['fee'];
         }
 
         //return general fee
-        return Configuration::get(self::K_FEE);
+        return \Configuration::get("MOBBEX_MARKETPLACE_FEE");
     }
 
     public static function getMarketplaceitems($products, $cart_total, $mobbex_total)
@@ -75,9 +75,9 @@ class MarketplaceHelper
         $items = [];
         foreach ($products as $product) {
 
-            $vendor_id = MobbexCustomFields::getCustomField($product['id_product'], 'product', 'vendor');
-            $vendor    = MobbexVendor::getVendors(true, 'id', $vendor_id);
-            $fee       = MarketplaceHelper::getProductFee($product['id_product']);
+            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            $vendor    = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
+            $fee       = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($product['id_product']);
             $dif       = ($cart_total / $mobbex_total * 100) - 100;
             $dif       = $dif <= 9 ? '0.0' . $dif : '0.' . $dif;
             

@@ -1,14 +1,14 @@
 <?php
-require_once _PS_ROOT_DIR_ . '/modules/mobbex_marketplace/classes/MobbexVendor.php';
+require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Vendor.php';
 
 class AdminMobbexController extends ModuleAdminController
 {
   public function __construct()
   {
     $this->bootstrap  = true; 
-    $this->table      = MobbexVendor::$definition['table']; 
-    $this->identifier = MobbexVendor::$definition['primary']; 
-    $this->className  = MobbexVendor::class;
+    $this->table      = \Mobbex\PS\Marketplace\Models\Vendor::$definition['table']; 
+    $this->identifier = \Mobbex\PS\Marketplace\Models\Vendor::$definition['primary']; 
+    $this->className  = \Mobbex\PS\Marketplace\Models\Vendor::class;
 
     parent::__construct();
 
@@ -66,7 +66,7 @@ class AdminMobbexController extends ModuleAdminController
           'label'         => $this->module->l('Cuit'), 
           'name'          => 'tax_id',
           'required'      => true, 
-          'empty_message' => $this->l('Rellena el codigo'), 
+          'empty_message' => $this->module->l('Rellena el codigo'), 
           'hint'          => $this->module->l('Ingresar el cuit del vendedor') 
         ],
         [
@@ -85,18 +85,18 @@ class AdminMobbexController extends ModuleAdminController
         ],
         [
           'type'     => 'switch',
-          'label'    => $this->l('Retener'),
+          'label'    => $this->module->l('Retener'),
           'name'     => 'hold',
           'values'   => [
               [
                   'id'    => 'active_on_mdv',
                   'value' => true,
-                  'label' => $this->l('Yes'),
+                  'label' => $this->module->l('Yes'),
               ],
               [
                   'id'    => 'active_off_mdv',
                   'value' => false,
-                  'label' => $this->l('No'),
+                  'label' => $this->module->l('No'),
               ],
           ],
         ],
@@ -108,7 +108,7 @@ class AdminMobbexController extends ModuleAdminController
         ]
       ],
       'submit' => [
-        'title' => $this->l('Save'), 
+        'title' => $this->module->l('Save'), 
       ]
     ];
     return parent::renderForm();
