@@ -15,12 +15,16 @@ class AdminMobbexController extends ModuleAdminController
     
     $this->fields_list = [
       'id' => [ 
-        'title' => $this->module->l('id'), 
+        'title' => 'id', 
         'align' => 'center', 
         'class' => 'fixed-width-xs' 
       ],
       'tax_id' => [
         'title' => $this->module->l('tax_id'),
+        'align' => 'left',
+      ],
+      'uid' => [
+        'title' => 'uid',
         'align' => 'left',
       ],
       'name' => [
@@ -68,6 +72,14 @@ class AdminMobbexController extends ModuleAdminController
           'required'      => true, 
           'empty_message' => $this->module->l('Rellena el codigo'), 
           'hint'          => $this->module->l('Ingresar el cuit del vendedor') 
+        ],
+        [
+          'type'          => 'text', 
+          'label'         => 'Mobbex UID', 
+          'name'          => 'uid',
+          'required'      => false, 
+          'empty_message' => $this->module->l('Rellena el codigo'), 
+          'hint'          => $this->module->l('Ingresar el uid de Mobbex del vendedor') 
         ],
         [
           'type'          => 'text',

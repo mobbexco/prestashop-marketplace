@@ -9,32 +9,25 @@ class Helper
     const PS_17 = "1.7";
 
     /**
-     * Get the vendors from a list of products.
+     * Get the vendors of a list of products.
      * @param array
      * @return array
      */
-    public static function getProductVendors($products, $filter = null)
+    public static function getProductsVendors($products)
     {
         $vendors = [];
 
         foreach ($products as $product) {
-            $vendor = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+
+            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
             
-            //If a product did not have vendor stop the process
-            if(!$vendor)
+            //If a product did not have vendor or vendor doesnt exist in db stop the process
+            if(!$vendor_id || !\Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id))
                 return false;
 
-            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor);
-            $vendor_id = $vendor[0]['id'] ?: '';
-
-            if (empty($vendor_id))
-                return [];
-
-            if ($filter)
-                array_push($vendors[$vendor_id]['items'], $product);
-            else
-                $vendors[$vendor_id][] = $product;
+            $vendors[$vendor_id][] = $product;
         }
+
         return $vendors;
     }
 
@@ -59,9 +52,9 @@ class Helper
         }
 
         //Get Vendor fee
-        $vendor = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($productId, 'product', 'vendor');
-        if ($vendor) {
-            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $fee);
+        $vendorId = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($productId, 'product', 'vendor');
+        if ($vendorId) {
+            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendorId);
             if ($vendor['fee'])
                 return $vendor['fee'];
         }
@@ -70,7 +63,7 @@ class Helper
         return \Configuration::get("MOBBEX_MARKETPLACE_FEE");
     }
 
-    public static function getMarketplaceitems($products, $cart_total, $mobbex_total)
+    public static function getMarketplaceItems($products, $cart_total, $mobbex_total, $op_type)
     {
         $items = [];
         foreach ($products as $product) {
@@ -84,12 +77,15 @@ class Helper
             $items[$product['id_product']]['name']          = $product['name'];
             $items[$product['id_product']]['quantity']      = $product['quantity'];
             $items[$product['id_product']]['total']         = round($product['price_wt'] + ($product['price_wt'] * $dif), 2);
-            $items[$product['id_product']]['fee_amount']    = $fee;
-            $fee                                            = $fee <= 9 ? '0.0' . $fee : '0.' . $fee;
-            $items[$product['id_product']]['fee']           = round(($product['price_wt'] + ($product['price_wt'] * $dif)) * $fee, 2);
-            $items[$product['id_product']]['vendor_name']   = $vendor[0]['name'] ?: '';
-            $items[$product['id_product']]['vendor_tax_id'] = $vendor[0]['tax_id'] ?: '';
-            $items[$product['id_product']]['vendor_hold']   = $vendor[0]['hold'] == 1 ? 'YES' : 'NO';
+            $items[$product['id_product']]['vendor_name']   = isset($vendor['name']) ? $vendor['name'] : '';
+            $items[$product['id_product']]['vendor_tax_id'] = isset($vendor['tax_id']) ? $vendor['tax_id'] : '';
+
+            if($op_type === "payment.split-hybrid"){
+                $items[$product['id_product']]['fee_amount']    = $fee;
+                $fee                                            = $fee <= 9 ? '0.0' . $fee : '0.' . $fee;
+                $items[$product['id_product']]['fee']           = round(($product['price_wt'] + ($product['price_wt'] * $dif)) * $fee, 2);
+                $items[$product['id_product']]['vendor_hold']   = isset($vendor['hold']) && $vendor['hold'] == 1 ? 'YES' : 'NO';
+            }
 
         }
         return $items;
