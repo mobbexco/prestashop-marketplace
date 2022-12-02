@@ -1,9 +1,12 @@
 <?php
 
-class MobbexVendor extends ObjectModel
+namespace Mobbex\PS\Marketplace\Models;
+
+class Vendor extends \ObjectModel
 {
     public $id;
     public $tax_id;
+    public $uid;
     public $name;
     public $fee;
     public $hold;
@@ -15,6 +18,7 @@ class MobbexVendor extends ObjectModel
         'primary' => 'id',
         'fields' => [
             'tax_id'      => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
+            'uid'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
             'name'        => ['type' => self::TYPE_STRING, 'validate' => 'isName', 'size'     => 255, 'required' => true],
             'fee'         => ['type' => self::TYPE_INT, 'validate'    => 'isAnything', 'size' => 255, 'required' => false],
             'hold'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
@@ -31,15 +35,17 @@ class MobbexVendor extends ObjectModel
      */
     public static function getVendors($filter = null, $paramName = null, $param = null)
     {
-        $sql = new DbQuery();
+        $sql = new \DbQuery();
         $sql->select('*');
+
         if($filter) {
             $query = $paramName . ' = ' . $param;
             $sql->where($query);
         }
-        $sql->from('mobbex_vendor', 'f');
 
-        $result = Db::getInstance()->executeS($sql);
+        $sql->from('mobbex_vendor', 'f');
+        $result = $filter ? \Db::getInstance()->executeS($sql)[0] : \Db::getInstance()->executeS($sql);
+        
         return !empty($result) ? $result : false;
     }
 

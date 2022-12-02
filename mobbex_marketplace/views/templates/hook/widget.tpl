@@ -4,35 +4,49 @@
     </th>
 </tr>
 
-{foreach from=$data item=product}
+<tr class="mobbex-color-column">
+    <td>Operation Type:</td>
+    <td>{$op_type}</td>
+</tr>
+
+{foreach from=$items item=product}
 
 <tr>
     <td>Producto:</td>
     <td>{$product['name']}</td>
 </tr>
 <tr class="mobbex-color-column">
-<td>Cantidad:</td>
-<td>{$product['quantity']}</td>
+    <td>Cantidad:</td>
+    <td>{$product['quantity']}</td>
 </tr>
 <tr>
-<td>Precio:</td>
-<td>${$product['total']}</td>
+    <td>Precio:</td>
+    <td>${$product['total']}</td>
 </tr>
 <tr class="mobbex-color-column">
-<td>Nombre del vendedor</td>
-<td>{$product['vendor_name']}</td>
+    <td>Nombre del vendedor</td>
+    <td>{$product['vendor_name']}</td>
 </tr>
 <tr>
-<td>CUIT</td>
-<td>{$product['vendor_tax_id']}</td>
+    <td>CUIT</td>
+    <td>{$product['vendor_tax_id']}</td>
 </tr>
-<tr class="mobbex-color-column">
-<td>Comisión:</td>
-<td>${$product['fee']} ({$product['fee_amount']}%)</td>
-</tr>
+
+<!--Only if Split Mode-->
+{if $op_type eq 'split-hybrid'}
+    <tr class="mobbex-color-column">
+        <td>Comisión:</td>
+        <td>${$product['fee']} ({$product['fee_amount']}%)</td>
+    </tr>
+    <tr>
+        <td>Retener:</td>
+        <td>{$product['vendor_hold']}</td>
+    </tr>
+{/if}
+
 <tr class="mobbex-end-table">
-<td>Retener:</td>
-<td>{$product['vendor_hold']}</td>
+    <td></td>
+    <td></td>
 </tr>
 
 {/foreach}
