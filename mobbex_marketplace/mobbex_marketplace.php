@@ -332,7 +332,7 @@ class Mobbex_Marketplace extends Module
 
             foreach ($items as $item) {
 
-                $total        = round($item['price_wt'], 2);
+                $total        = round($total['total_wt'], 2);
                 $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $prod_ids[]   = $item['id_product'];
                 $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
@@ -346,7 +346,6 @@ class Mobbex_Marketplace extends Module
                 ];
             }
         }
-
         return $data;
     }
 

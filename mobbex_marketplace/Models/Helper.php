@@ -76,14 +76,14 @@ class Helper
             
             $items[$product['id_product']]['name']          = $product['name'];
             $items[$product['id_product']]['quantity']      = $product['quantity'];
-            $items[$product['id_product']]['total']         = round($product['price_wt'] + ($product['price_wt'] * $dif), 2);
+            $items[$product['id_product']]['total']         = round(($product['total_wt'] + ($product['total_wt'] * $dif)), 2);
             $items[$product['id_product']]['vendor_name']   = isset($vendor['name']) ? $vendor['name'] : '';
             $items[$product['id_product']]['vendor_tax_id'] = isset($vendor['tax_id']) ? $vendor['tax_id'] : '';
 
             if($op_type === "payment.split-hybrid"){
                 $items[$product['id_product']]['fee_amount']    = $fee;
                 $fee                                            = $fee <= 9 ? '0.0' . $fee : '0.' . $fee;
-                $items[$product['id_product']]['fee']           = round(($product['price_wt'] + ($product['price_wt'] * $dif)) * $fee, 2);
+                $items[$product['id_product']]['fee']           = round(($product['total_wt'] + ($product['total_wt'] * $dif)) * $fee , 2);
                 $items[$product['id_product']]['vendor_hold']   = isset($vendor['hold']) && $vendor['hold'] == 1 ? 'YES' : 'NO';
             }
 
