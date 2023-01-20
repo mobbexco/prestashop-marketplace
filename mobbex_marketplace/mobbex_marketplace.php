@@ -331,15 +331,13 @@ class Mobbex_Marketplace extends Module
             $prod_ids = [];
 
             foreach ($items as $item) {
-
-                $total        = round($total['total_wt'], 2);
                 $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $prod_ids[]   = $item['id_product'];
                 $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
                 $data['split'][] = [
                     'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
                     'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
-                    'total'       => $total,
+                    'total'       => $item['total_wt'],
                     'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),
                     'fee'         => $fee . '%',
                     'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
