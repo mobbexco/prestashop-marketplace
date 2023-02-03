@@ -1,4 +1,5 @@
 <?php
+require_once _PS_MODULE_DIR_ . 'mobbex/Models/AbstractModel.php';
 require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Vendor.php';
 
 class AdminMobbexController extends ModuleAdminController

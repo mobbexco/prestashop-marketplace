@@ -2,7 +2,7 @@
 
 namespace Mobbex\PS\Marketplace\Models;
 
-class Vendor extends \ObjectModel
+class Vendor extends \Mobbex\PS\Checkout\Models\AbstractModel
 {
     public $id;
     public $tax_id;

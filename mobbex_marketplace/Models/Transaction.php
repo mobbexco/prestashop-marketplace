@@ -2,7 +2,7 @@
 
 namespace Mobbex\PS\Marketplace\Models;
 
-class Transaction extends \ObjectModel
+class Transaction extends \Mobbex\PS\Checkout\Models\AbstractModel
 {
     public $id;
     public $payment_id;
