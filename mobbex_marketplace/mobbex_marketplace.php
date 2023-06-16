@@ -312,16 +312,17 @@ class Mobbex_Marketplace extends Module
     /**
      * Add Marketplace data to Mobbex checkout body if marketplace is active.
      * 
-     * @param array
-     * @param array
+     * @param array $data
+     * 
      * @return array
      */
-    public function hookActionMobbexCheckoutRequest($data, $products)
+    public function hookActionMobbexCheckoutRequest($data)
     {
         if (\Configuration::get("MOBBEX_MARKETPLACE_MODE") !== 'split')
             return $data;
 
-        $vendors = \Mobbex\PS\Marketplace\Models\Helper::getProductsVendors($products);
+        $products = \Context::getContext()->cart->getProducts();
+        $vendors  = \Mobbex\PS\Marketplace\Models\Helper::getProductsVendors($products);
 
         if(!$vendors)
             throw new Exception("One or more products doesn't have a vendor." );
