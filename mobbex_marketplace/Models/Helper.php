@@ -19,16 +19,57 @@ class Helper
 
         foreach ($products as $product) {
 
-            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            $vendor_id = self::getVendorFromProdId($product['id_product']);
             
-            //If a product did not have vendor or vendor doesnt exist in db stop the process
+            //If a product did not have vendor stop the process
             if(!$vendor_id || !\Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id))
-                return false;
+                return;
 
             $vendors[$vendor_id][] = $product;
         }
 
         return $vendors;
+    }
+
+    /**
+     * Get a vendor id from product id
+     * 
+     * @param string $id
+     * 
+     * @return string|bool
+     * 
+     */
+    public static function getVendorFromProdId($id)
+    {
+        $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($id, 'product', 'vendor');
+            
+        //If a product did not have vendor try to obtain it by category
+        if(!$vendor_id || !\Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id))
+            $vendor_id = self::getCategoryVendors($id);
+
+        return $vendor_id;
+    }
+
+    /**
+     * Get the the vendor id from the product category
+     * 
+     * @param string $product_id
+     * 
+     * @return string|bool 
+     * 
+     */
+    public static function getCategoryVendors($product_id)
+    {
+        $product = new \Product($product_id);
+
+        foreach ($product->getCategories() as $cat) {
+            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($cat, 'category', 'vendor');
+
+            if($vendor_id)
+                return $vendor_id;
+        }
+
+        return false;
     }
 
     /**
@@ -40,6 +81,7 @@ class Helper
     {
         //Get Product fee
         $fee = \Mobbex\PS\Checkout\Models\CustomFields::getCustomfield($productId, 'product', 'fee');
+        
         if ($fee)
             return $fee;
 
@@ -52,7 +94,7 @@ class Helper
         }
 
         //Get Vendor fee
-        $vendorId = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($productId, 'product', 'vendor');
+        $vendorId = self::getVendorFromProdId($productId);
         if ($vendorId) {
             $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendorId);
             if ($vendor['fee'])
