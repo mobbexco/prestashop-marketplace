@@ -337,6 +337,7 @@ class Mobbex_Marketplace extends Module
                 $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
                 $data['split'][] = [
                     'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
+                    'entity'      => isset($vendor['uid']) ? $vendor['uid'] : '',
                     'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
                     'total'       => $item['total_wt'],
                     'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),

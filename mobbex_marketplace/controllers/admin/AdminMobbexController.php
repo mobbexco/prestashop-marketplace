@@ -68,9 +68,9 @@ class AdminMobbexController extends ModuleAdminController
       'input' => [
         [
           'type'          => 'text', 
-          'label'         => $this->module->l('Cuit'), 
+          'label'         => $this->module->l('Cuit (Deprecated)'), 
           'name'          => 'tax_id',
-          'required'      => true, 
+          'required'      => false, 
           'empty_message' => $this->module->l('Rellena el codigo'), 
           'hint'          => $this->module->l('Ingresar el cuit del vendedor') 
         ],
@@ -78,7 +78,7 @@ class AdminMobbexController extends ModuleAdminController
           'type'          => 'text', 
           'label'         => 'Mobbex UID', 
           'name'          => 'uid',
-          'required'      => false, 
+          'required'      => true, 
           'empty_message' => $this->module->l('Rellena el codigo'), 
           'hint'          => $this->module->l('Ingresar el uid de Mobbex del vendedor') 
         ],

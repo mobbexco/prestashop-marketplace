@@ -17,8 +17,8 @@ class Vendor extends \Mobbex\PS\Checkout\Models\AbstractModel
         'table' => 'mobbex_vendor',
         'primary' => 'id',
         'fields' => [
-            'tax_id'      => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
-            'uid'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
+            'tax_id'      => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
+            'uid'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
             'name'        => ['type' => self::TYPE_STRING, 'validate' => 'isName', 'size'     => 255, 'required' => true],
             'fee'         => ['type' => self::TYPE_INT, 'validate'    => 'isAnything', 'size' => 255, 'required' => false],
             'hold'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
