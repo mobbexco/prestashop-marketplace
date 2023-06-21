@@ -9,9 +9,37 @@ class Helper
     const PS_17 = "1.7";
 
     /**
+     * Get cart products considering cart rules
+     * 
+     * @param array $cart
+     * @param array $rules
+     * 
+     * @return array $vendors
+     * 
+     */
+    public static function getCartProducts($cart)
+    {   
+        $vendors = [];
+        // Check if there is any cart rule
+        if ($cart->getCartRules()) {
+            // Applies rules to the corresponding product(s) and get vendors
+            $ruleProducts = \Mobbex\PS\Checkout\Models\CartRules::getRules($cart->getCartRules(), $cart->getProducts(true));
+            $vendors      = self::getProductsVendors($ruleProducts);
+        }
+        else {
+            // Get vendors from cart products
+            $vendors = self::getProductsVendors($cart->getProducts(true));
+        }
+        return $vendors;
+    }
+
+    /**
      * Get the vendors of a list of products.
-     * @param array
-     * @return array
+     * 
+     * @param array $products
+     * 
+     * @return array $vendors
+     * 
      */
     public static function getProductsVendors($products)
     {
