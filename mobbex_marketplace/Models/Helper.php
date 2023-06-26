@@ -4,7 +4,7 @@ namespace Mobbex\PS\Marketplace\Models;
 
 class Helper
 {
-    const PLUGIN_VERSION = '1.1.1';
+    const PLUGIN_VERSION = '1.1.2';
     const PS_16 = "1.6";
     const PS_17 = "1.7";
 
