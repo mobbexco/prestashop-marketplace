@@ -23,7 +23,7 @@ class Helper
         // Check if there is any cart rule
         if ($cart->getCartRules()) {
             // Applies rules to the corresponding product(s) and get vendors
-            $ruleProducts = \Mobbex\PS\Checkout\Models\CartRules::getRules($cart->getCartRules(), $cart->getProducts(true));
+            $ruleProducts = (new \Mobbex\PS\Checkout\Models\PriceCalculator($cart))->applyCartRules();
             $vendors      = self::getProductsVendors($ruleProducts);
         }
         else {
