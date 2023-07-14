@@ -212,7 +212,7 @@ class Mobbex_Marketplace extends Module
                 'desc'     => $this->l('Change how the plugin works. Multivendor mode require to set the vendor UID in the vendors panel.'),
                 'name'     => 'MOBBEX_MARKETPLACE_MODE',
                 'key'      => 'marketplace_mode',
-                'default'  => 'marketplace',
+                'default'  => 'split',
                 'required' => false,
                 'tab'      => 'tab_marketplace',
                 'options'  => [
