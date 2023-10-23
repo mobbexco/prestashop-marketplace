@@ -338,13 +338,13 @@ class Mobbex_Marketplace extends Module
                 $prod_ids[]   = $item['id_product'];
                 $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
                 $data['split'][] = [
-                    'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
-                    'entity'      => isset($vendor['uid']) ? $vendor['uid'] : '',
-                    'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
-                    'total'       => !$cart->getCartRules() ? $item['total_wt'] : $item['price_wt'],
-                    'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),
                     'fee'         => $fee . '%',
+                    'total'       => $item['price_wt'],
+                    'entity'      => isset($vendor['uid']) ? $vendor['uid'] : '',
+                    'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
                     'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
+                    'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),
+                    'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
                 ];
             }
         }

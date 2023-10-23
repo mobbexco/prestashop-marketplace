@@ -11,26 +11,21 @@ class Helper
     /**
      * Get cart products considering cart rules
      * 
-     * @param array $cart
+     * @param object $cart
      * @param array $rules
      * 
-     * @return array $vendors
+     * @return array vendors
      * 
      */
     public static function getCartProducts($cart)
-    {   
-        $vendors = [];
-        // Check if there is any cart rule
-        if ($cart->getCartRules()) {
-            // Applies rules to the corresponding product(s) and get vendors
-            $ruleProducts = (new \Mobbex\PS\Checkout\Models\PriceCalculator($cart))->getCartRules();
-            $vendors      = self::getProductsVendors($ruleProducts);
-        }
-        else {
-            // Get vendors from cart products
-            $vendors = self::getProductsVendors($cart->getProducts(true));
-        }
-        return $vendors;
+    {
+        // Instance price calculator
+        $priceCalculator = new \Mobbex\PS\Checkout\Models\PriceCalculator($cart);
+        
+        // Check if there is any cart rule. Applies cart rules if appropriate.
+        return self::getProductsVendors(
+            $cart->getCartRules() ? $priceCalculator->getCartRules() : $cart->getProducts(true)
+        );
     }
 
     /**
