@@ -9,9 +9,32 @@ class Helper
     const PS_17 = "1.7";
 
     /**
+     * Get cart products considering cart rules
+     * 
+     * @param object $cart
+     * @param array $rules
+     * 
+     * @return array vendors
+     * 
+     */
+    public static function getCartProducts($cart)
+    {
+        // Instance price calculator
+        $priceCalculator = new \Mobbex\PS\Checkout\Models\PriceCalculator($cart);
+        
+        // Check if there is any cart rule. Applies cart rules if appropriate.
+        return self::getProductsVendors(
+            $cart->getCartRules() ? $priceCalculator->getCartRules() : $cart->getProducts(true)
+        );
+    }
+
+    /**
      * Get the vendors of a list of products.
-     * @param array
-     * @return array
+     * 
+     * @param array $products
+     * 
+     * @return array $vendors
+     * 
      */
     public static function getProductsVendors($products)
     {
