@@ -149,7 +149,7 @@ class Mobbex_Marketplace extends Module
 
         if (!empty($_GET['run_mrkt_update'])) {
             $this->runUpdate();
-            Tools::redirectAdmin(\Mobbex\PS\Checkout\Models\Helper::getUpgradeURL());
+            Tools::redirectAdmin(\Mobbex\PS\Checkout\Models\Updater::getUpgradeURL());
         }
         if ($this->updater->hasUpdates(\Mobbex\PS\Marketplace\Models\Helper::PLUGIN_VERSION))
             $form['form']['description'] = "¡Nueva actualización disponible! Haga <a href='$_SERVER[REQUEST_URI]&run_mrkt_update=1'>clic aquí</a> para actualizar a la versión " . $this->updater->latestRelease['tag_name'];
