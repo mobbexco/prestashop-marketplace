@@ -242,12 +242,11 @@ class Mobbex_Marketplace extends Module
         $db->execute(
             "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_vendor` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                `tax_id` TEXT NOT NULL,
                 `uid` TEXT NOT NULL,
 				`name` TEXT NOT NULL,
 				`fee` TEXT NOT NULL,
 				`hold` BOOLEAN NOT NULL,
-                `created` DATE NOT NULL
+                `updated` DATE NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
 

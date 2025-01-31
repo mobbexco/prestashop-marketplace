@@ -27,10 +27,6 @@
     <td>Nombre del vendedor</td>
     <td>{$product['vendor_name']}</td>
 </tr>
-<tr>
-    <td>CUIT</td>
-    <td>{$product['vendor_tax_id']}</td>
-</tr>
 
 <!--Only if Split Mode-->
 {if $op_type eq 'split-hybrid'}

@@ -5,24 +5,21 @@ namespace Mobbex\PS\Marketplace\Models;
 class Vendor extends \Mobbex\PS\Checkout\Models\AbstractModel
 {
     public $id;
-    public $tax_id;
     public $uid;
     public $name;
     public $fee;
     public $hold;
-    public $created;
-
+    public $updated;
 
     public static $definition = [
         'table' => 'mobbex_vendor',
         'primary' => 'id',
         'fields' => [
-            'tax_id'      => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
             'uid'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
-            'name'        => ['type' => self::TYPE_STRING, 'validate' => 'isName', 'size'     => 255, 'required' => true],
-            'fee'         => ['type' => self::TYPE_INT, 'validate'    => 'isAnything', 'size' => 255, 'required' => false],
+            'name'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
+            'fee'         => ['type' => self::TYPE_INT,    'validate' => 'isAnything', 'size' => 255, 'required' => false],
             'hold'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
-            'created'     => ['type' => self::TYPE_DATE, 'validate'   => 'isDateFormat'],
+            'updated'     => ['type' => self::TYPE_DATE,   'validate' => 'isDateFormat', 'default' => 'NOW()', 'required' => false],
         ],
     ];
 
