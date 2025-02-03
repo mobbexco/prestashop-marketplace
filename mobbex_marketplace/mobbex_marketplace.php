@@ -72,7 +72,7 @@ class Mobbex_Marketplace extends Module
         $this->_createTables();
         $this->_installTab();
 
-        return parent::install() && $this->registerHooks();
+        return parent::install() && $this->unregisterHooks() && $this->registerHooks();
     }
 
     /**
@@ -85,6 +85,7 @@ class Mobbex_Marketplace extends Module
      */
     public function uninstall()
     {
+        $this->unregisterHooks();
         return parent::uninstall() && $this->_uninstallTab();
     }
 
@@ -104,18 +105,31 @@ class Mobbex_Marketplace extends Module
             'actionCategoryUpdate',
             'displayMobbexOrderWidget',
             'actionMobbexWebhook',
-            'actionMobbexGetProductEntity'
+            'actionGetMobbexProductEntity'
         ];
-
-        $ps16Hooks = [];
-
-        $ps17Hooks = [];
-
-        // Merge current version hooks with common hooks
-        $hooks = array_merge($hooks, _PS_VERSION_ > '1.7' ? $ps17Hooks : $ps16Hooks);
 
         foreach ($hooks as $hookName) {
             if (!$this->registerHook($hookName))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Unregister all current module hooks.
+     * 
+     * @return bool Result.
+     */
+    public function unregisterHooks()
+    {
+        // Get hooks used by module
+        $hooks = \Db::getInstance()->executeS(
+            'SELECT DISTINCT(`id_hook`) FROM `' . _DB_PREFIX_ . 'hook_module` WHERE `id_module` = ' . $this->id
+        ) ?: [];
+
+        foreach ($hooks as $hook) {
+            if (!$this->unregisterHook($hook['id_hook']) || !$this->unregisterExceptions($hook['id_hook']))
                 return false;
         }
 
@@ -132,8 +146,7 @@ class Mobbex_Marketplace extends Module
         try {
             $this->updater->updateVersion($this, true);
         } catch (\PrestaShopException $e) {
-            $logger = new \Mobbex\PS\Checkout\Models\Logger();
-            $logger->log('error','Mobbex Marketplace Update Error: ', $e->getMessage());
+            Logger::log('error','Mobbex Marketplace Update Error: ', $e->getMessage());
         }
     }
 
@@ -452,7 +465,7 @@ class Mobbex_Marketplace extends Module
         return \Mobbex\PS\Marketplace\Models\Transaction::saveTransaction($data['payment']['id'], $data['payment']['operation']['type'], json_encode($items));
     }
 
-    public function hookActionMobbexGetProductEntity($product)
+    public function hookActionGetMobbexProductEntity($product)
     {
         if (!in_array(\Configuration::get("MOBBEX_MULTIVENDOR"), ['unified', 'active']))
             return null;
