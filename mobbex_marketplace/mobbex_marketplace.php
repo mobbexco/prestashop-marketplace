@@ -20,6 +20,8 @@ require_once dirname(__FILE__) . '/Models/Helper.php';
 require_once dirname(__FILE__) . '/Models/Vendor.php';
 require_once dirname(__FILE__) . '/Models/Transaction.php';
 
+use \Mobbex\PS\Checkout\Models\Logger;
+
 /**
  * Main class of the module
  */
@@ -198,38 +200,14 @@ class Mobbex_Marketplace extends Module
         return [
             [
                 'type'     => 'text',
-                'label'    => $this->l('Fee (%)', 'config-form'),
+                'label'    => $this->l('Comisión General (%)', 'config-form'),
                 'name'     => 'MOBBEX_MARKETPLACE_FEE',
                 'required' => false,
                 'tab'      => 'tab_marketplace',
                 'default'  => '0',
                 'key'      => 'marketplace_fee',
-                'desc'     => $this->l('Set a general commission amount')
-            ],
-            [
-                'type'     => 'select',
-                'label'    => $this->l('Mode', 'config-form'),
-                'desc'     => $this->l('Change how the plugin works. Multivendor mode require to set the vendor UID in the vendors panel.'),
-                'name'     => 'MOBBEX_MARKETPLACE_MODE',
-                'key'      => 'marketplace_mode',
-                'default'  => 'split',
-                'required' => false,
-                'tab'      => 'tab_marketplace',
-                'options'  => [
-                    'query' => [
-                        [
-                            'id_option' => 'split',
-                            'name'      => 'Split'
-                        ],
-                        [
-                            'id_option' => 'multivendor',
-                            'name'      => 'Multivendor'
-                        ],
-                    ],
-                    'id'   => 'id_option',
-                    'name' => 'name'
-                ]
-            ],
+                'desc'     => $this->l('Se aplicará a todos los vendedores que no tengan aplicada una comisión.')
+            ]
         ];
     }
 
@@ -318,7 +296,7 @@ class Mobbex_Marketplace extends Module
      */
     public function hookActionMobbexCheckoutRequest($data)
     {
-        if (\Configuration::get("MOBBEX_MARKETPLACE_MODE") !== 'split')
+        if (in_array(\Configuration::get("MOBBEX_MULTIVENDOR"), ['unified', 'active']))
             return $data;
 
         // Gets the vendors of each item in the current cart
@@ -476,9 +454,9 @@ class Mobbex_Marketplace extends Module
 
     public function hookActionMobbexGetProductEntity($product)
     {
-        if(\Configuration::get("MOBBEX_MARKETPLACE_MODE") !== 'multivendor')
-            return '';
-       
+        if (!in_array(\Configuration::get("MOBBEX_MULTIVENDOR"), ['unified', 'active']))
+            return null;
+
         $vendorId = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product->id, 'product', 'vendor');
         $vendor   = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendorId);
 
