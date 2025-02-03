@@ -2,6 +2,11 @@
 
 namespace Mobbex\PS\Marketplace\Models;
 
+use \Mobbex\PS\Marketplace\Models\Vendor;
+use \Mobbex\PS\Checkout\Models\Logger;
+use \Mobbex\PS\Checkout\Models\PriceCalculator;
+use \Mobbex\PS\Checkout\Models\CustomFields;
+
 class Helper
 {
     const PLUGIN_VERSION = '1.1.2';
@@ -19,9 +24,8 @@ class Helper
      */
     public static function getCartProducts($cart)
     {
-        // Instance price calculator
-        $priceCalculator = new \Mobbex\PS\Checkout\Models\PriceCalculator($cart);
-        
+        $priceCalculator = new PriceCalculator($cart);
+
         // Check if there is any cart rule. Applies cart rules if appropriate.
         return self::getProductsVendors(
             $cart->getCartRules() ? $priceCalculator->getCartRules() : $cart->getProducts(true)
@@ -41,12 +45,12 @@ class Helper
         $vendors = [];
 
         foreach ($products as $product) {
-
             $vendor_id = self::getVendorFromProdId($product['id_product']);
-            
-            //If a product did not have vendor stop the process
-            if(!$vendor_id || !\Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id))
-                return;
+
+            if (!$vendor_id || !Vendor::getVendors(true, 'id', $vendor_id)) {
+                Logger::log('error', 'Trying to split payment on products without vendor', $product['id_product'], $vendor_id);
+                continue;
+            }
 
             $vendors[$vendor_id][] = $product;
         }
@@ -64,10 +68,10 @@ class Helper
      */
     public static function getVendorFromProdId($id)
     {
-        $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($id, 'product', 'vendor');
+        $vendor_id = CustomFields::getCustomField($id, 'product', 'vendor');
             
         //If a product did not have vendor try to obtain it by category
-        if(!$vendor_id || !\Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id))
+        if(!$vendor_id || !Vendor::getVendors(true, 'id', $vendor_id))
             $vendor_id = self::getCategoryVendors($id);
 
         return $vendor_id;
@@ -86,7 +90,7 @@ class Helper
         $product = new \Product($product_id);
 
         foreach ($product->getCategories() as $cat) {
-            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($cat, 'category', 'vendor');
+            $vendor_id = CustomFields::getCustomField($cat, 'category', 'vendor');
 
             if($vendor_id)
                 return $vendor_id;
@@ -103,7 +107,7 @@ class Helper
     public static function getProductFee($productId)
     {
         //Get Product fee
-        $fee = \Mobbex\PS\Checkout\Models\CustomFields::getCustomfield($productId, 'product', 'fee');
+        $fee = CustomFields::getCustomfield($productId, 'product', 'fee');
         
         if ($fee)
             return $fee;
@@ -111,7 +115,7 @@ class Helper
         //get category fee
         $product = new \Product($productId);
         foreach ($product->getCategories() as $categoryId) {
-            $fee = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($categoryId, 'category', 'fee');
+            $fee = CustomFields::getCustomField($categoryId, 'category', 'fee');
             if ($fee)
                 return $fee;
         }
@@ -119,7 +123,7 @@ class Helper
         //Get Vendor fee
         $vendorId = self::getVendorFromProdId($productId);
         if ($vendorId) {
-            $vendor = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendorId);
+            $vendor = Vendor::getVendors(true, 'id', $vendorId);
             if ($vendor['fee'])
                 return $vendor['fee'];
         }
@@ -133,9 +137,9 @@ class Helper
         $items = [];
         foreach ($products as $product) {
 
-            $vendor_id = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
-            $vendor    = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
-            $fee       = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($product['id_product']);
+            $vendor_id = CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
+            $vendor    = Vendor::getVendors(true, 'id', $vendor_id);
+            $fee       = self::getProductFee($product['id_product']);
             $dif       = ($cart_total / $mobbex_total * 100) - 100;
             $dif       = $dif <= 9 ? '0.0' . $dif : '0.' . $dif;
             
@@ -143,7 +147,6 @@ class Helper
             $items[$product['id_product']]['quantity']      = $product['quantity'];
             $items[$product['id_product']]['total']         = $product['total_wt'] + ($product['total_wt'] * $dif);
             $items[$product['id_product']]['vendor_name']   = isset($vendor['name']) ? $vendor['name'] : '';
-            $items[$product['id_product']]['vendor_tax_id'] = isset($vendor['tax_id']) ? $vendor['tax_id'] : '';
 
             if($op_type === "payment.split-hybrid"){
                 $items[$product['id_product']]['fee_amount']    = $fee;
