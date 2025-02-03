@@ -320,24 +320,26 @@ class Mobbex_Marketplace extends Module
             throw new Exception("One or more products doesn't have a vendor." );
 
         foreach ($vendors as $vendor_id => $items) {
-
-            $prod_ids = [];
+            $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
+            $prod_ids     = [];
+            $vendor_total = 0;
 
             foreach ($items as $item) {
                 $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $prod_ids[]   = $item['id_product'];
-                $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
-                $data['split'][] = [
-                    'fee'         => $fee . '%',
-                    'total'       => $item['price_wt'],
-                    'entity'      => isset($vendor['uid']) ? $vendor['uid'] : '',
-                    'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
-                    'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
-                    'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),
-                    'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
-                ];
+                $vendor_total += $item['price_wt'];
             }
+
+            $data['split'][] = [
+                'fee'         => $fee . '%',
+                'total'       => $item['price_wt'],
+                'entity'      => $vendor['uid'],
+                'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
+                'reference'   => $data['reference'] . '_split_' . $vendor['uid'],
+                'description' => "Split payment - $vendor[uid] - Product IDs: " . implode(", ", $prod_ids),
+            ];
         }
+
         return $data;
     }
 
