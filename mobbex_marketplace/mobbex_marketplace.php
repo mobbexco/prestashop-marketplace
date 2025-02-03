@@ -237,7 +237,7 @@ class Mobbex_Marketplace extends Module
 				`name` TEXT NOT NULL,
 				`fee` TEXT NOT NULL,
 				`hold` BOOLEAN NOT NULL,
-                `updated` DATE NOT NULL DEFAULT CURRENT_TIMESTAMP
+                `updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
 
@@ -262,17 +262,16 @@ class Mobbex_Marketplace extends Module
         $tab->active     = 1;
         $tab->module     = $this->name;
         $tab->id_parent  = (int)Tab::getIdFromClassName('SELL');
-        $tab->icon       = 'settings_applications';
+        $tab->icon       = 'people';
 
         foreach (Language::getLanguages() as $lang)
-            $tab->name[$lang['id_lang']] = $this->l('Mobbex Marketplace');
+            $tab->name[$lang['id_lang']] = $this->l('Vendedores • Mobbex');
 
 
         try {
             $tab->save();
         } catch (Exception $e) {
-            $logger = new \Mobbex\PS\Checkout\Models\Logger();
-            $logger->log('error', 'Mobbex_Marketplace > _installTab | Error installing Tab', $e->getMessage());
+            Logger::log('error', 'Mobbex_Marketplace > _installTab | Error installing Tab', $e->getMessage());
             return false;
         }
 
@@ -291,8 +290,7 @@ class Mobbex_Marketplace extends Module
             try {
                 $tab->delete();
             } catch (Exception $e) {
-                $logger = new \Mobbex\PS\Checkout\Models\Logger();
-                $logger->log('error', 'Mobbex_Marketplace > _installTab | Error uninstalling Tab', $e->getMessage());
+                Logger::log('error', 'Mobbex_Marketplace > _installTab | Error uninstalling Tab', $e->getMessage());
                 return false;
             }
         }
