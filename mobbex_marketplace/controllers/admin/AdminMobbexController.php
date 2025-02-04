@@ -4,126 +4,105 @@ require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Vendor.php';
 
 class AdminMobbexController extends ModuleAdminController
 {
-  public function __construct()
-  {
-    $this->bootstrap  = true; 
-    $this->table      = \Mobbex\PS\Marketplace\Models\Vendor::$definition['table']; 
-    $this->identifier = \Mobbex\PS\Marketplace\Models\Vendor::$definition['primary']; 
-    $this->className  = \Mobbex\PS\Marketplace\Models\Vendor::class;
+    public function __construct()
+    {
+        $this->bootstrap  = true;
+        $this->table      = \Mobbex\PS\Marketplace\Models\Vendor::$definition['table'];
+        $this->identifier = \Mobbex\PS\Marketplace\Models\Vendor::$definition['primary'];
+        $this->className  = \Mobbex\PS\Marketplace\Models\Vendor::class;
 
-    parent::__construct();
+        parent::__construct();
 
-    
-    $this->fields_list = [
-      'id' => [ 
-        'title' => 'id', 
-        'align' => 'center', 
-        'class' => 'fixed-width-xs' 
-      ],
-      'tax_id' => [
-        'title' => $this->module->l('tax_id'),
-        'align' => 'left',
-      ],
-      'uid' => [
-        'title' => 'uid',
-        'align' => 'left',
-      ],
-      'name' => [
-        'title' => $this->module->l('name'),
-        'align' => 'left',
-      ],
-      'fee' => [
-        'title' => $this->module->l('fee'),
-        'align' => 'left',
-      ],
-      'hold' => [
-        'title' => $this->module->l('hold'),
-        'align' => 'left',
-      ],
-      'created' => [
-        'title' => $this->module->l('created'),
-        'align' => 'left',
-      ]
-    ];
+        $this->fields_list = [
+            'id' => [
+                'title' => $this->module->l('ID'),
+                'align' => 'center',
+                'class' => 'fixed-width-xs'
+            ],
+            'name' => [
+                'title' => $this->module->l('Nombre'),
+                'align' => 'left',
+            ],
+            'uid' => [
+                'title' => $this->module->l('Identificador en Mobbex'),
+                'align' => 'left',
+            ],
+            'fee' => [
+                'title' => $this->module->l('Comisión (%)'),
+                'align' => 'left',
+            ],
+            'hold' => [
+                'title' => $this->module->l('Retener pagos'),
+                'align' => 'left',
+            ],
+            'updated' => [
+                'title' => $this->module->l('Actualizado'),
+                'align' => 'left',
+            ]
+        ];
 
-    $this->addRowAction('edit');
-    $this->addRowAction('delete');
-  }
+        $this->addRowAction('edit');
+        $this->addRowAction('delete');
+    }
 
+    public function renderForm()
+    {
+        $this->fields_form = [
+            'legend' => [
+                'title' => $this->module->l('Crear/Editar vendedor'),
+                'icon' => 'icon-cog'
+            ],
 
-  /**
-   * 
-   * @return string
-   * @throws SmartyException
-   */
-  public function renderForm()
-  {
-    $this->fields_form = [
+            'input' => [
+                [
+                    'type'          => 'text',
+                    'label'         => $this->module->l('Nombre del vendedor'),
+                    'name'          => 'name',
+                    'required'      => true,
+                ],
+                [
+                    'type'          => 'text',
+                    'label'         => $this->module->l('Identificador en Mobbex'),
+                    'name'          => 'uid',
+                    'required'      => true,
+                    'desc'   => $this->module->l('Ingresar el UID del vendedor proporcionado por Mobbex')
+                ],
+                [
+                    'type'          => 'text',
+                    'label'         => $this->module->l('Comisión (%)'),
+                    'name'          => 'fee',
+                    'required'      => false,
+                    'desc'   => $this->module->l('Ingresar la comisión que se le cobrará al vendedor, si corresponde')
+                ],
+                [
+                    'type'     => 'switch',
+                    'label'    => $this->module->l('Retener pagos'),
+                    'name'     => 'hold',
+                    'desc'     => $this->module->l('Retener pagos hasta que el vendedor cumpla con ciertas condiciones'),
+                    'values'   => [
+                        [
+                            'id'    => 'active_on_mdv',
+                            'value' => true,
+                            'label' => $this->module->l('Yes'),
+                        ],
+                        [
+                            'id'    => 'active_off_mdv',
+                            'value' => false,
+                            'label' => $this->module->l('No'),
+                        ],
+                    ],
+                ],
+                [
+                    'type'     => 'html',
+                    'name'     => 'updated',
+                    'html_content' => '<input type="hidden" name="updated" value="' . date('Y-m-d H:i:s') . '">'
+                ]
+            ],
+            'submit' => [
+                'title' => $this->module->l('Save'),
+            ]
+        ];
 
-      'legend' => [
-        'title' => $this->module->l('Editar Vendedores'),
-        'icon' => 'icon-cog'
-      ],
-
-      'input' => [
-        [
-          'type'          => 'text', 
-          'label'         => $this->module->l('Cuit (Deprecated)'), 
-          'name'          => 'tax_id',
-          'required'      => false, 
-          'empty_message' => $this->module->l('Rellena el codigo'), 
-          'hint'          => $this->module->l('Ingresar el cuit del vendedor') 
-        ],
-        [
-          'type'          => 'text', 
-          'label'         => 'Mobbex UID', 
-          'name'          => 'uid',
-          'required'      => true, 
-          'empty_message' => $this->module->l('Rellena el codigo'), 
-          'hint'          => $this->module->l('Ingresar el uid de Mobbex del vendedor') 
-        ],
-        [
-          'type'          => 'text',
-          'label'         => $this->module->l('Nombre del vendedor'),
-          'name'          => 'name',
-          'required'      => true,
-          'empty_message' => $this->module->l('Rellena el codigo'),
-        ],
-        [
-          'type'          => 'text',
-          'label'         => $this->module->l('Comisión (%)'),
-          'name'          => 'fee',
-          'required'      => false,
-          'empty_message' => $this->module->l('Rellena el codigo'),
-        ],
-        [
-          'type'     => 'switch',
-          'label'    => $this->module->l('Retener'),
-          'name'     => 'hold',
-          'values'   => [
-              [
-                  'id'    => 'active_on_mdv',
-                  'value' => true,
-                  'label' => $this->module->l('Yes'),
-              ],
-              [
-                  'id'    => 'active_off_mdv',
-                  'value' => false,
-                  'label' => $this->module->l('No'),
-              ],
-          ],
-        ],
-        [
-          'type'          => 'datetime',
-          'label'         => $this->module->l('Creado'),
-          'name'          => 'created',
-          'empty_message' => $this->module->l('Rellena el codigo'),
-        ]
-      ],
-      'submit' => [
-        'title' => $this->module->l('Save'), 
-      ]
-    ];
-    return parent::renderForm();
-  }
+        return parent::renderForm();
+    }
 }

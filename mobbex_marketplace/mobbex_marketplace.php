@@ -20,6 +20,8 @@ require_once dirname(__FILE__) . '/Models/Helper.php';
 require_once dirname(__FILE__) . '/Models/Vendor.php';
 require_once dirname(__FILE__) . '/Models/Transaction.php';
 
+use \Mobbex\PS\Checkout\Models\Logger;
+
 /**
  * Main class of the module
  */
@@ -70,7 +72,7 @@ class Mobbex_Marketplace extends Module
         $this->_createTables();
         $this->_installTab();
 
-        return parent::install() && $this->registerHooks();
+        return parent::install() && $this->unregisterHooks() && $this->registerHooks();
     }
 
     /**
@@ -83,6 +85,7 @@ class Mobbex_Marketplace extends Module
      */
     public function uninstall()
     {
+        $this->unregisterHooks();
         return parent::uninstall() && $this->_uninstallTab();
     }
 
@@ -102,18 +105,31 @@ class Mobbex_Marketplace extends Module
             'actionCategoryUpdate',
             'displayMobbexOrderWidget',
             'actionMobbexWebhook',
-            'actionMobbexGetProductEntity'
+            'actionGetMobbexProductEntity'
         ];
-
-        $ps16Hooks = [];
-
-        $ps17Hooks = [];
-
-        // Merge current version hooks with common hooks
-        $hooks = array_merge($hooks, _PS_VERSION_ > '1.7' ? $ps17Hooks : $ps16Hooks);
 
         foreach ($hooks as $hookName) {
             if (!$this->registerHook($hookName))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Unregister all current module hooks.
+     * 
+     * @return bool Result.
+     */
+    public function unregisterHooks()
+    {
+        // Get hooks used by module
+        $hooks = \Db::getInstance()->executeS(
+            'SELECT DISTINCT(`id_hook`) FROM `' . _DB_PREFIX_ . 'hook_module` WHERE `id_module` = ' . $this->id
+        ) ?: [];
+
+        foreach ($hooks as $hook) {
+            if (!$this->unregisterHook($hook['id_hook']) || !$this->unregisterExceptions($hook['id_hook']))
                 return false;
         }
 
@@ -130,8 +146,7 @@ class Mobbex_Marketplace extends Module
         try {
             $this->updater->updateVersion($this, true);
         } catch (\PrestaShopException $e) {
-            $logger = new \Mobbex\PS\Checkout\Models\Logger();
-            $logger->log('error','Mobbex Marketplace Update Error: ', $e->getMessage());
+            Logger::log('error','Mobbex Marketplace Update Error: ', $e->getMessage());
         }
     }
 
@@ -195,41 +210,22 @@ class Mobbex_Marketplace extends Module
      */
     protected function getFormInputs()
     {
+        $ver = \Mobbex\PS\Checkout\Models\Config::MODULE_VERSION;
+
+        if (version_compare($ver, '4.4.0', '<'))
+            return [];
+
         return [
             [
                 'type'     => 'text',
-                'label'    => $this->l('Fee (%)', 'config-form'),
+                'label'    => $this->l('Comisión General (%)', 'config-form'),
                 'name'     => 'MOBBEX_MARKETPLACE_FEE',
                 'required' => false,
                 'tab'      => 'tab_marketplace',
                 'default'  => '0',
                 'key'      => 'marketplace_fee',
-                'desc'     => $this->l('Set a general commission amount')
-            ],
-            [
-                'type'     => 'select',
-                'label'    => $this->l('Mode', 'config-form'),
-                'desc'     => $this->l('Change how the plugin works. Multivendor mode require to set the vendor UID in the vendors panel.'),
-                'name'     => 'MOBBEX_MARKETPLACE_MODE',
-                'key'      => 'marketplace_mode',
-                'default'  => 'split',
-                'required' => false,
-                'tab'      => 'tab_marketplace',
-                'options'  => [
-                    'query' => [
-                        [
-                            'id_option' => 'split',
-                            'name'      => 'Split'
-                        ],
-                        [
-                            'id_option' => 'multivendor',
-                            'name'      => 'Multivendor'
-                        ],
-                    ],
-                    'id'   => 'id_option',
-                    'name' => 'name'
-                ]
-            ],
+                'desc'     => $this->l('Se aplicará a todos los vendedores que no tengan aplicada una comisión.')
+            ]
         ];
     }
 
@@ -242,12 +238,11 @@ class Mobbex_Marketplace extends Module
         $db->execute(
             "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_vendor` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                `tax_id` TEXT NOT NULL,
                 `uid` TEXT NOT NULL,
 				`name` TEXT NOT NULL,
 				`fee` TEXT NOT NULL,
 				`hold` BOOLEAN NOT NULL,
-                `created` DATE NOT NULL
+                `updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
 
@@ -272,17 +267,16 @@ class Mobbex_Marketplace extends Module
         $tab->active     = 1;
         $tab->module     = $this->name;
         $tab->id_parent  = (int)Tab::getIdFromClassName('SELL');
-        $tab->icon       = 'settings_applications';
+        $tab->icon       = 'people';
 
         foreach (Language::getLanguages() as $lang)
-            $tab->name[$lang['id_lang']] = $this->l('Mobbex Marketplace');
+            $tab->name[$lang['id_lang']] = $this->l('Vendedores • Mobbex');
 
 
         try {
             $tab->save();
         } catch (Exception $e) {
-            $logger = new \Mobbex\PS\Checkout\Models\Logger();
-            $logger->log('error', 'Mobbex_Marketplace > _installTab | Error installing Tab', $e->getMessage());
+            Logger::log('error', 'Mobbex_Marketplace > _installTab | Error installing Tab', $e->getMessage());
             return false;
         }
 
@@ -301,8 +295,7 @@ class Mobbex_Marketplace extends Module
             try {
                 $tab->delete();
             } catch (Exception $e) {
-                $logger = new \Mobbex\PS\Checkout\Models\Logger();
-                $logger->log('error', 'Mobbex_Marketplace > _installTab | Error uninstalling Tab', $e->getMessage());
+                Logger::log('error', 'Mobbex_Marketplace > _installTab | Error uninstalling Tab', $e->getMessage());
                 return false;
             }
         }
@@ -319,7 +312,7 @@ class Mobbex_Marketplace extends Module
      */
     public function hookActionMobbexCheckoutRequest($data)
     {
-        if (\Configuration::get("MOBBEX_MARKETPLACE_MODE") !== 'split')
+        if (in_array(\Configuration::get("MOBBEX_MULTIVENDOR"), ['unified', 'active']))
             return $data;
 
         // Gets the vendors of each item in the current cart
@@ -330,24 +323,26 @@ class Mobbex_Marketplace extends Module
             throw new Exception("One or more products doesn't have a vendor." );
 
         foreach ($vendors as $vendor_id => $items) {
-
-            $prod_ids = [];
+            $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
+            $prod_ids     = [];
+            $vendor_total = 0;
 
             foreach ($items as $item) {
                 $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $prod_ids[]   = $item['id_product'];
-                $vendor       = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendor_id);
-                $data['split'][] = [
-                    'fee'         => $fee . '%',
-                    'total'       => $item['price_wt'],
-                    'entity'      => isset($vendor['uid']) ? $vendor['uid'] : '',
-                    'tax_id'      => isset($vendor['tax_id']) ? strval($vendor['tax_id']) : '',
-                    'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
-                    'reference'   => $data['reference'] . '_split_' . (isset($vendor['tax_id']) ? $vendor['tax_id'] : ''),
-                    'description' => "Split payment - tax_" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . ":" . (isset($vendor['tax_id']) ? $vendor['tax_id'] : '') . "- Product IDs: " . implode(", ", $prod_ids),
-                ];
+                $vendor_total += $item['price_wt'];
             }
+
+            $data['split'][] = [
+                'fee'         => $fee . '%',
+                'total'       => $item['price_wt'],
+                'entity'      => $vendor['uid'],
+                'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
+                'reference'   => $data['reference'] . '_split_' . $vendor['uid'],
+                'description' => "Split payment - $vendor[uid] - Product IDs: " . implode(", ", $prod_ids),
+            ];
         }
+
         return $data;
     }
 
@@ -475,11 +470,11 @@ class Mobbex_Marketplace extends Module
         return \Mobbex\PS\Marketplace\Models\Transaction::saveTransaction($data['payment']['id'], $data['payment']['operation']['type'], json_encode($items));
     }
 
-    public function hookActionMobbexGetProductEntity($product)
+    public function hookActionGetMobbexProductEntity($product)
     {
-        if(\Configuration::get("MOBBEX_MARKETPLACE_MODE") !== 'multivendor')
-            return '';
-       
+        if (!in_array(\Configuration::get("MOBBEX_MULTIVENDOR"), ['unified', 'active']))
+            return null;
+
         $vendorId = \Mobbex\PS\Checkout\Models\CustomFields::getCustomField($product->id, 'product', 'vendor');
         $vendor   = \Mobbex\PS\Marketplace\Models\Vendor::getVendors(true, 'id', $vendorId);
 
