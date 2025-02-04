@@ -210,6 +210,11 @@ class Mobbex_Marketplace extends Module
      */
     protected function getFormInputs()
     {
+        $ver = \Mobbex\PS\Checkout\Models\Config::MODULE_VERSION;
+
+        if (version_compare($ver, '4.4.0', '<'))
+            return [];
+
         return [
             [
                 'type'     => 'text',
