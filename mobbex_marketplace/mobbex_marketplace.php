@@ -456,9 +456,16 @@ class Mobbex_Marketplace extends Module
      * @param string
      * 
      */
-    public function hookActionMobbexWebhook($data, $cart_id) {
+    public function hookActionMobbexWebhook($data, $cart_id)
+    {
+        // Try to decode (for checkout < 4.4.0)
+        if (is_string($data))
+            $data = json_decode($data, true);
 
-        if($data['payment']['operation']['type'] === 'payment.v2' || \Mobbex\PS\Marketplace\Models\Transaction::getTrx($data['payment']['id']))
+        if (!isset($data['payment']['operation']['type']))
+            throw new Exception("Error parsing webhook data on marketplace plugin.");
+
+        if ($data['payment']['operation']['type'] === 'payment.v2' || \Mobbex\PS\Marketplace\Models\Transaction::getTrx($data['payment']['id']))
             return;
 
         //Get items
