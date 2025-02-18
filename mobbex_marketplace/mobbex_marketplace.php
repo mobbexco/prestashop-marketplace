@@ -218,13 +218,13 @@ class Mobbex_Marketplace extends Module
         return [
             [
                 'type'     => 'text',
-                'label'    => $this->l('Comisión General (%)', 'config-form'),
+                'label'    => $this->l('Comisión General', 'config-form'),
                 'name'     => 'MOBBEX_MARKETPLACE_FEE',
                 'required' => false,
                 'tab'      => 'tab_marketplace',
                 'default'  => '0',
                 'key'      => 'marketplace_fee',
-                'desc'     => $this->l('Se aplicará a todos los vendedores que no tengan aplicada una comisión.')
+                'desc'     => $this->l('La comisión que se le cobrará a los vendedores, si corresponde. Use el signo % para cobrar en porcentaje. Ej. "10%"')
             ]
         ];
     }
@@ -328,14 +328,13 @@ class Mobbex_Marketplace extends Module
             $vendor_total = 0;
 
             foreach ($items as $item) {
-                $fee          = \Mobbex\PS\Marketplace\Models\Helper::getProductFee($item['id_product']);
                 $prod_ids[]   = $item['id_product'];
                 $vendor_total += $item['price_wt'];
             }
 
             $data['split'][] = [
-                'fee'         => $fee . '%',
-                'total'       => $item['price_wt'],
+                'fee'         => \Mobbex\PS\Marketplace\Models\Helper::calculateFee($prod_ids[0], $vendor_total),
+                'total'       => $vendor_total,
                 'entity'      => $vendor['uid'],
                 'hold'        => isset($vendor['hold']) && $vendor['hold'] == 1 ? true : false,
                 'reference'   => $data['reference'] . '_split_' . $vendor['uid'],

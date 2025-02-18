@@ -32,7 +32,7 @@
 {if $op_type eq 'split-hybrid'}
     <tr class="mobbex-color-column">
         <td>Comisión:</td>
-        <td>${$product['fee']} ({$product['fee_amount']}%)</td>
+        <td>${$product['fee']} ({$product['fee_amount']})</td>
     </tr>
     <tr>
         <td>Retener:</td>

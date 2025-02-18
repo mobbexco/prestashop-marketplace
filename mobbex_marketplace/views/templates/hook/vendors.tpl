@@ -17,8 +17,8 @@
         </fieldset>
     </div>
     <div class="col-md-12 mbbx-mrkt-cfg">
-        <label for="mbbx_fee">Comisión (%)</label>
-        <p>Especifique el porcentaje de la comisión.</p>
+        <label for="mbbx_fee">Comisión</label>
+        <p>La comisión que se le cobrará al vendedor, si corresponde. Use el signo % para cobrar en porcentaje. Ej. "10%"</p>
     </div>
     <div class="col-md-3">
         <fieldset>

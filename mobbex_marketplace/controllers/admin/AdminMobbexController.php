@@ -28,7 +28,7 @@ class AdminMobbexController extends ModuleAdminController
                 'align' => 'left',
             ],
             'fee' => [
-                'title' => $this->module->l('Comisión (%)'),
+                'title' => $this->module->l('Comisión'),
                 'align' => 'left',
             ],
             'hold' => [
@@ -69,10 +69,10 @@ class AdminMobbexController extends ModuleAdminController
                 ],
                 [
                     'type'          => 'text',
-                    'label'         => $this->module->l('Comisión (%)'),
+                    'label'         => $this->module->l('Comisión'),
                     'name'          => 'fee',
                     'required'      => false,
-                    'desc'   => $this->module->l('Ingresar la comisión que se le cobrará al vendedor, si corresponde')
+                    'desc'   => $this->module->l('La comisión que se le cobrará al vendedor, si corresponde. Use el signo % para cobrar en porcentaje. Ej. "10%"')
                 ],
                 [
                     'type'     => 'switch',
