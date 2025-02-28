@@ -17,7 +17,7 @@ class Vendor extends \Mobbex\PS\Checkout\Models\AbstractModel
         'fields' => [
             'uid'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
             'name'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => true],
-            'fee'         => ['type' => self::TYPE_INT,    'validate' => 'isAnything', 'size' => 255, 'required' => false],
+            'fee'         => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
             'hold'        => ['type' => self::TYPE_STRING, 'validate' => 'isAnything', 'size' => 255, 'required' => false],
             'updated'     => ['type' => self::TYPE_DATE,   'validate' => 'isDateFormat', 'default' => 'NOW()', 'required' => false],
         ],

@@ -132,6 +132,21 @@ class Helper
         return \Configuration::get("MOBBEX_MARKETPLACE_FEE");
     }
 
+    public static function calculateFee($product_id, $total)
+    {
+        $fee = self::getProductFee($product_id);
+        $feePercentage = str_replace('%', '', (string) $fee);
+
+        if (!$fee)
+            return 0;
+
+        // If the fee is fixed, return it
+        if (is_numeric($fee))
+            return (float) $fee;
+
+        return is_numeric($feePercentage) ? $total * $feePercentage / 100 : 0;
+    }
+
     public static function getMarketplaceItems($products, $cart_total, $mobbex_total, $op_type)
     {
         $items = [];
@@ -139,7 +154,6 @@ class Helper
 
             $vendor_id = CustomFields::getCustomField($product['id_product'], 'product', 'vendor');
             $vendor    = Vendor::getVendors(true, 'id', $vendor_id);
-            $fee       = self::getProductFee($product['id_product']);
             $dif       = ($cart_total / $mobbex_total * 100) - 100;
             $dif       = $dif <= 9 ? '0.0' . $dif : '0.' . $dif;
             
@@ -149,9 +163,8 @@ class Helper
             $items[$product['id_product']]['vendor_name']   = isset($vendor['name']) ? $vendor['name'] : '';
 
             if($op_type === "payment.split-hybrid"){
-                $items[$product['id_product']]['fee_amount']    = $fee;
-                $fee                                            = $fee <= 9 ? '0.0' . $fee : '0.' . $fee;
-                $items[$product['id_product']]['fee']           = ($product['total_wt'] + ($product['total_wt'] * $dif)) * $fee;
+                $items[$product['id_product']]['fee_amount']    = self::getProductFee($product['id_product']);
+                $items[$product['id_product']]['fee']           = self::calculateFee($product['id_product'], $product['total_wt']);
                 $items[$product['id_product']]['vendor_hold']   = isset($vendor['hold']) && $vendor['hold'] == 1 ? 'YES' : 'NO';
             }
 
