@@ -6,19 +6,12 @@
  * Main file of the module
  *
  * @author  Mobbex Co <admin@mobbex.com>
- * @version 1.2.0
+ * @version 1.2.1
  * @see     PaymentModuleCore
  */
 
 if (!defined('_PS_VERSION_'))
     exit;
-
-require_once _PS_MODULE_DIR_ . 'mobbex/Models/Updater.php';
-require_once _PS_MODULE_DIR_ . 'mobbex/Models/Config.php';
-require_once _PS_MODULE_DIR_ . 'mobbex/Models/Logger.php';
-require_once dirname(__FILE__) . '/Models/Helper.php';
-require_once dirname(__FILE__) . '/Models/Vendor.php';
-require_once dirname(__FILE__) . '/Models/Transaction.php';
 
 use \Mobbex\PS\Checkout\Models\Logger;
 
@@ -27,11 +20,24 @@ use \Mobbex\PS\Checkout\Models\Logger;
  */
 class Mobbex_Marketplace extends Module
 {
+    /** @var \Mobbex\PS\Checkout\Models\Updater */
+    public $updater;
+
+    /** @var \Db */
+    public $db;
+
     /**
      * Constructor
      */
     public function __construct()
     {
+        require_once _PS_MODULE_DIR_ . 'mobbex/Models/Updater.php';
+        require_once _PS_MODULE_DIR_ . 'mobbex/Models/Config.php';
+        require_once _PS_MODULE_DIR_ . 'mobbex/Models/Logger.php';
+        require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Helper.php';
+        require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Vendor.php';
+        require_once _PS_MODULE_DIR_ . 'mobbex_marketplace/Models/Transaction.php';
+
         $this->name            = 'mobbex_marketplace';
         $this->tab             = 'payments_gateways';
         $this->version         = \Mobbex\PS\Marketplace\Models\Helper::PLUGIN_VERSION;
@@ -47,6 +53,7 @@ class Mobbex_Marketplace extends Module
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
         //Mobbex Classes
         $this->updater = new \Mobbex\PS\Checkout\Models\Updater('mobbexco/prestashop-marketplace');
+        $this->db      = \Db::getInstance();
     }
 
     /**
@@ -124,7 +131,7 @@ class Mobbex_Marketplace extends Module
     public function unregisterHooks()
     {
         // Get hooks used by module
-        $hooks = \Db::getInstance()->executeS(
+        $hooks = $this->db->executeS(
             'SELECT DISTINCT(`id_hook`) FROM `' . _DB_PREFIX_ . 'hook_module` WHERE `id_module` = ' . $this->id
         ) ?: [];
 
@@ -233,27 +240,73 @@ class Mobbex_Marketplace extends Module
 
     public function _createTables()
     {
-        $db = DB::getInstance();
-
-        $db->execute(
+        $this->runMigrations();
+        $this->db->execute(
             "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_vendor` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 `uid` TEXT NOT NULL,
-				`name` TEXT NOT NULL,
-				`fee` TEXT NOT NULL,
-				`hold` BOOLEAN NOT NULL,
+                `name` TEXT NOT NULL,
+                `fee` TEXT NOT NULL,
+                `hold` BOOLEAN NOT NULL,
                 `updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
 
-        $db->execute(
+        $this->db->execute(
             "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "mobbex_marketplace_transaction` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-				`payment_id` TEXT NOT NULL,
+                `payment_id` TEXT NOT NULL,
                 `operation_type` TEXT NOT NULL,
                 `data` TEXT NOT NULL
             ) ENGINE=" . _MYSQL_ENGINE_ . " DEFAULT CHARSET=utf8;"
         );
+    }
+
+    /**
+     * Check if the tables need to be updated and run the migrations.
+     * 
+     * @return bool The result of the migrations
+     */
+    public function runMigrations()
+    {
+        $results = [];
+
+        $vendorExists = $this->db->executeS('SHOW TABLES LIKE "' . _DB_PREFIX_ . 'mobbex_vendor"');
+        $trxExists    = $this->db->executeS('SHOW TABLES LIKE "' . _DB_PREFIX_ . 'mobbex_marketplace_transaction"');
+
+        if ($vendorExists) {
+            $columns = $this->db->executeS('SHOW COLUMNS FROM `' . _DB_PREFIX_ . 'mobbex_vendor`');
+
+            // Add uid column
+            if (!in_array('uid', array_column($columns, 'Field')))
+                $results[] = $this->db->execute(
+                    "ALTER TABLE `" . _DB_PREFIX_ . "mobbex_vendor` ADD `uid` TEXT NOT NULL;"
+                );
+
+            // Rename created to updated
+            if (in_array('created', array_column($columns, 'Field')))
+                $results[] = $this->db->execute(
+                    "ALTER TABLE `" . _DB_PREFIX_ . "mobbex_vendor` CHANGE `created` `updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;"
+                );
+
+            // Remove tax_id
+            if (in_array('tax_id', array_column($columns, 'Field')))
+                $results[] = $this->db->execute(
+                    "ALTER TABLE `" . _DB_PREFIX_ . "mobbex_vendor` DROP `tax_id`;"
+                );
+        }
+
+        if ($trxExists) {
+            $columns = $this->db->executeS('SHOW COLUMNS FROM `' . _DB_PREFIX_ . 'mobbex_marketplace_transaction`');
+
+            // Add operation_type column
+            if (!in_array('operation_type', array_column($columns, 'Field')))
+                $results[] = $this->db->execute(
+                    "ALTER TABLE `" . _DB_PREFIX_ . "mobbex_marketplace_transaction` ADD `operation_type` TEXT NOT NULL;"
+                );
+        }
+
+        return !in_array(false, $results);
     }
 
     /**
