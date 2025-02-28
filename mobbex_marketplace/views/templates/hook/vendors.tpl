@@ -1,7 +1,7 @@
 <div class="col-md-12 align-items-center" style="margin-top: 2em;">
     <h2 class="mr-3" style="display: inline-block;">Marketplace</h2>
 </div>
-<div class="row col-md-12 form-group mbbx-mrkt-cfg {if !$marketplace}hidden{/if}">
+<div class="row col-md-12 form-group mbbx-mrkt-cfg">
     <div class="col-md-12">
         <label for="mbbx_vendor">Seleccione un vendedor:</label>
         <p>Selecciona el vendedor correspondiente a este articulo/categoria</p>
