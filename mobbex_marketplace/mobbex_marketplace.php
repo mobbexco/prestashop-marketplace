@@ -382,7 +382,7 @@ class Mobbex_Marketplace extends Module
 
             foreach ($items as $item) {
                 $prod_ids[]   = $item['id_product'];
-                $vendor_total += $item['price_wt'];
+                $vendor_total += $item['total_wt'];
             }
 
             $data['split'][] = [
