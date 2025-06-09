@@ -3,7 +3,7 @@
 VER="1.2.2"
 
 # Unified Version
-PRESTAV="1.6-1.7"
+PRESTAV="1.6-8.2"
 
 if type 7z > /dev/null; then
     7z a -tzip "mobbex_marketplace.$VER.ps-$PRESTAV.zip" mobbex_marketplace

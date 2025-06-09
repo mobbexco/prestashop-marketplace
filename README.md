@@ -1,7 +1,7 @@
 # Mobbex Marketplace for PrestaShop
 
 ## Requisitos
-- PrestaShop 1.7 - 1.6
+- PrestaShop 1.6 - 8.2
 - PHP >= 7.0
 - Mobbex >= 2.7.0
 
